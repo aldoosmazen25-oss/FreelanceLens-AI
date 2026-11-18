@@ -44,6 +44,10 @@ export const VoiceLiveModal: React.FC<VoiceLiveModalProps> = ({
   const {
     userProfile,
     projects,
+    opportunities,
+    proposals,
+    financials,
+    notifications,
     voiceSessions,
     saveVoiceSession,
     deleteVoiceSession,
@@ -195,6 +199,12 @@ export const VoiceLiveModal: React.FC<VoiceLiveModalProps> = ({
             language,
             voiceName,
             userProfile,
+            projects,
+            opportunities,
+            proposals,
+            financials,
+            notifications,
+            workStatus: userProfile.workStatus || 'work',
             projectsSummary: projects.slice(0, 5).map((p) => ({
               title: p.title,
               budget: p.budget,
@@ -213,7 +223,18 @@ export const VoiceLiveModal: React.FC<VoiceLiveModalProps> = ({
         const data = await res.json();
         const finalUserText = (data.transcript || textInput || '').trim();
         const resolvedIntent: VoiceTaskIntentResult =
-          data.taskIntent || resolveVoiceAgentTaskIntent(finalUserText);
+          data.taskIntent ||
+          resolveVoiceAgentTaskIntent(finalUserText, {
+            userProfile,
+            projects,
+            opportunities,
+            proposals,
+            financials,
+            notifications,
+            workStatus: userProfile.workStatus || 'work',
+            channel: 'voice',
+            language,
+          });
 
         setLastExecutedIntent(resolvedIntent);
         if (onExecuteTaskIntent) {
@@ -261,8 +282,11 @@ export const VoiceLiveModal: React.FC<VoiceLiveModalProps> = ({
 
         setStatus('speaking');
 
-        // When an actual app command was executed, close the full-screen modal shortly after so the user sees the executed action in the app
-        if (resolvedIntent.actionType !== 'unknown') {
+        // When an actual non-confirmation app command was executed, close modal shortly after
+        if (
+          resolvedIntent.actionType !== 'unknown' &&
+          !(resolvedIntent.requiresConfirmation && !resolvedIntent.confirmed)
+        ) {
           setTimeout(() => {
             onClose();
           }, 950);
@@ -298,7 +322,17 @@ export const VoiceLiveModal: React.FC<VoiceLiveModalProps> = ({
       } catch {
         clearTimeout(subTimer1);
         clearTimeout(subTimer2);
-        const fallbackIntent = resolveVoiceAgentTaskIntent(textInput);
+        const fallbackIntent = resolveVoiceAgentTaskIntent(textInput, {
+          userProfile,
+          projects,
+          opportunities,
+          proposals,
+          financials,
+          notifications,
+          workStatus: userProfile.workStatus || 'work',
+          channel: 'voice',
+          language,
+        });
         setLastExecutedIntent(fallbackIntent);
         if (onExecuteTaskIntent) {
           onExecuteTaskIntent(fallbackIntent, textInput);
@@ -312,7 +346,10 @@ export const VoiceLiveModal: React.FC<VoiceLiveModalProps> = ({
             ? fallbackIntent.spokenSummaryEn
             : fallbackIntent.spokenSummaryAr;
         speakFallbackWithSynthesis(fallbackReply, () => {});
-        if (fallbackIntent.actionType !== 'unknown') {
+        if (
+          fallbackIntent.actionType !== 'unknown' &&
+          !(fallbackIntent.requiresConfirmation && !fallbackIntent.confirmed)
+        ) {
           setTimeout(() => {
             onClose();
           }, 950);
@@ -324,10 +361,15 @@ export const VoiceLiveModal: React.FC<VoiceLiveModalProps> = ({
     [
       continuousMode,
       currentSession,
+      financials,
       isOpen,
       language,
+      notifications,
+      onClose,
       onExecuteTaskIntent,
+      opportunities,
       projects,
+      proposals,
       saveVoiceSession,
       speakFallbackWithSynthesis,
       stopAudioAnalysis,
@@ -822,6 +864,9 @@ export const VoiceLiveModal: React.FC<VoiceLiveModalProps> = ({
                       <div className="text-[11px] font-bold text-[#FDE68A]">
                         {lastExecutedIntent.actionType === 'unknown'
                           ? 'Lens Voice · أمر غير معروف'
+                          : lastExecutedIntent.requiresConfirmation &&
+                            !lastExecutedIntent.confirmed
+                          ? 'إجراء حساس — بانتظار تأكيدك'
                           : `تم تنفيذ الأمر داخل التطبيق (${lastExecutedIntent.actionType})`}
                       </div>
                       <div className="text-xs text-white truncate">
@@ -829,15 +874,46 @@ export const VoiceLiveModal: React.FC<VoiceLiveModalProps> = ({
                       </div>
                     </div>
                   </div>
-                  {lastExecutedIntent.actionType !== 'unknown' && (
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-[11px] font-bold text-white flex items-center gap-1 shrink-0"
-                    >
-                      <span>مشاهدة في التطبيق</span>
-                      <ArrowUpLeft className="w-3.5 h-3.5" />
-                    </button>
+                  {lastExecutedIntent.requiresConfirmation &&
+                  !lastExecutedIntent.confirmed ? (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const confirmed = {
+                            ...lastExecutedIntent,
+                            confirmed: true,
+                          };
+                          setLastExecutedIntent(confirmed);
+                          onExecuteTaskIntent?.(
+                            confirmed,
+                            lastExecutedIntent.projectDeleteTarget?.projectTitleKeyword || ''
+                          );
+                          onClose();
+                        }}
+                        className="px-3 py-1.5 rounded-full bg-[#FF3B30] hover:bg-[#DC2626] text-[11px] font-bold text-white"
+                      >
+                        تأكيد الحذف
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLastExecutedIntent(null)}
+                        className="px-2.5 py-1.5 rounded-full bg-white/15 text-[11px] font-semibold text-white"
+                      >
+                        إلغاء
+                      </button>
+                    </div>
+                  ) : (
+                    lastExecutedIntent.actionType !== 'unknown' && (
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-[11px] font-bold text-white flex items-center gap-1 shrink-0"
+                      >
+                        <span>مشاهدة في التطبيق</span>
+                        <ArrowUpLeft className="w-3.5 h-3.5" />
+                      </button>
+                    )
                   )}
                 </div>
               )}

@@ -24,7 +24,10 @@ import {
   SkillItem,
 } from '../types';
 
-import { calculateComprehensiveProfileCompleteness } from '../utils/calculations';
+import {
+  calculateComprehensiveProfileCompleteness,
+  FIREWORK_MARKETPLACE_CATALOG,
+} from '../utils/calculations';
 
 export function buildEmptyUserProfile(
   uid = '',
@@ -54,6 +57,7 @@ export function buildEmptyUserProfile(
     hourlyRate: 50,
     currency: 'USD',
     availability: 'متاح للعمل الحر',
+    workStatus: 'work',
     education: {
       highestLevel: isAuto ? 'bachelor' : '',
       fieldOfStudy: isAuto ? 'Computer Science' : '',
@@ -137,7 +141,9 @@ const WELCOME_CHAT_SESSION: ChatSession = {
 interface DataContextType {
   userProfile: UserProfile;
   updateUserProfile: (updated: Partial<UserProfile>) => Promise<void>;
+  setWorkStatus: (status: 'work' | 'sleep') => Promise<void>;
   addSkillsToProfile: (newSkills: Array<{ name: string; level?: string }>) => Promise<void>;
+  removeSkillFromProfile: (skillName: string) => Promise<void>;
   projects: SavedProject[];
   saveProject: (proj: Omit<SavedProject, 'id' | 'ownerId' | 'createdAt'> & { id?: string }) => Promise<SavedProject>;
   updateProjectStatus: (projectId: string, status: ProjectStatus) => Promise<void>;
@@ -202,7 +208,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user?.uid ? loadLocal(`fl_projects_${user.uid}`, []) : []
   );
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>(() =>
-    user?.uid ? loadLocal(`fl_opportunities_${user.uid}`, []) : []
+    user?.uid
+      ? loadLocal(`fl_opportunities_${user.uid}`, FIREWORK_MARKETPLACE_CATALOG)
+      : FIREWORK_MARKETPLACE_CATALOG
   );
   const [proposals, setProposals] = useState<ProposalRecord[]>(() =>
     user?.uid ? loadLocal(`fl_proposals_${user.uid}`, []) : []
@@ -232,7 +240,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user?.uid) {
       setUserProfile(buildEmptyUserProfile('', '', ''));
       setProjects([]);
-      setOpportunities([]);
+      setOpportunities(FIREWORK_MARKETPLACE_CATALOG);
       setProposals([]);
       setFinancials([]);
       setChatSessions([WELCOME_CHAT_SESSION]);
@@ -248,6 +256,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name: savedProfile.name || savedProfile.fullName || user.name,
         fullName: savedProfile.fullName || savedProfile.name || user.name,
         email: savedProfile.email || user.email,
+        workStatus: savedProfile.workStatus || 'work',
       });
     } else {
       const fresh = buildEmptyUserProfile(user.uid, user.name, user.email);
@@ -256,7 +265,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setProjects(loadLocal(`fl_projects_${user.uid}`, []));
-    setOpportunities(loadLocal(`fl_opportunities_${user.uid}`, []));
+    setOpportunities(
+      loadLocal(`fl_opportunities_${user.uid}`, FIREWORK_MARKETPLACE_CATALOG)
+    );
     setProposals(loadLocal(`fl_proposals_${user.uid}`, []));
     setFinancials(loadLocal(`fl_financials_${user.uid}`, []));
     setChatSessions(loadLocal(`fl_chat_${user.uid}`, [WELCOME_CHAT_SESSION]));
@@ -465,6 +476,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             hourlyRate: Number(nextProfile.hourlyRate) || 50,
             currency: (nextProfile.currency || 'USD').slice(0, 10),
             availability: (nextProfile.availability || '').slice(0, 60),
+            workStatus: nextProfile.workStatus || 'work',
             education: nextProfile.education || null,
             skills: nextProfile.skills || [],
             fewerThanThreeSkillsReason: nextProfile.fewerThanThreeSkillsReason || '',
@@ -486,6 +498,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const setWorkStatus = async (status: 'work' | 'sleep') => {
+    await updateUserProfile({
+      workStatus: status,
+      availability:
+        status === 'work'
+          ? 'متاح للعمل الحر'
+          : 'وضع الهدوء (Sleep) — غير متاح لاستقبال أعمال حالياً',
+    });
+  };
+
   const addSkillsToProfile = async (
     newSkills: Array<{ name: string; level?: string }>
   ) => {
@@ -500,7 +522,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: `sk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           name: sk.name,
           level:
-            sk.level === 'خبير' || sk.level === 'متقدم' || sk.level === 'متوسط'
+            sk.level === 'خبير' ||
+            sk.level === 'متقدم' ||
+            sk.level === 'متوسط' ||
+            sk.level === 'مبتدئ'
               ? sk.level
               : 'متقدم',
           verified: true,
@@ -510,6 +535,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (additions.length > 0) {
       await updateUserProfile({
         skills: [...userProfile.skills, ...additions],
+      });
+    }
+  };
+
+  const removeSkillFromProfile = async (skillName: string) => {
+    const normalized = skillName.trim().toLowerCase();
+    if (!normalized) return;
+    const filteredSkills = userProfile.skills.filter(
+      (s) => !s.name.toLowerCase().includes(normalized)
+    );
+    if (filteredSkills.length !== userProfile.skills.length) {
+      await updateUserProfile({
+        skills: filteredSkills,
       });
     }
   };
@@ -853,7 +891,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         userProfile,
         updateUserProfile,
+        setWorkStatus,
         addSkillsToProfile,
+        removeSkillFromProfile,
         projects,
         saveProject,
         updateProjectStatus,

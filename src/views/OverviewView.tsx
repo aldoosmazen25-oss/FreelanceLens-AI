@@ -107,6 +107,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 }) => {
   const {
     userProfile,
+    setWorkStatus,
     projects,
     proposals,
     financials,
@@ -118,7 +119,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   const { language, theme, toggleFocusTimer, isFocusRunning } = useLanguage();
   const { staggerContainer, staggerItem, reducedMotion } = useMotionSystem();
 
-  const [workSleepMode, setWorkSleepMode] = useState<'work' | 'sleep'>('work');
+  const workSleepMode: 'work' | 'sleep' =
+    userProfile.workStatus === 'sleep' ? 'sleep' : 'work';
 
   const [projectTitle, setProjectTitle] = useState<string>(
     selectedProjectForAction?.title || ''
@@ -781,7 +783,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               type="button"
               onClick={() => {
                 const next = workSleepMode === 'work' ? 'sleep' : 'work';
-                setWorkSleepMode(next);
+                void setWorkStatus(next);
                 if (next === 'work' && !isFocusRunning) {
                   toggleFocusTimer();
                 } else if (next === 'sleep' && isFocusRunning) {
@@ -2165,7 +2167,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               descEn: 'Sliding crystal lens switch for Work & Sleep',
               src: '/assets/aistudio/From_Klickpin.com-_Recreate_this_clever_reception_ideas_roundup_youll_want_to_recreate_this_weekend_with_aesthetic_touches_that_photograph_beautif_fff77936.mp4',
               action: () =>
-                setWorkSleepMode((prev) => (prev === 'work' ? 'sleep' : 'work')),
+                void setWorkStatus(workSleepMode === 'work' ? 'sleep' : 'work'),
             },
             {
               id: 'vid-cool-capsule',

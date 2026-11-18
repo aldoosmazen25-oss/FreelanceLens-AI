@@ -17,30 +17,46 @@ import {
   AlertCircle,
   Paperclip,
   FileText,
+  CheckCircle2,
+  ShieldAlert,
+  ArrowUpLeft,
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { ChatMessage, ChatSession, ViewId } from '../types';
-import { validateComposerAttachment } from '../utils/calculations';
+import {
+  validateComposerAttachment,
+  VoiceTaskIntentResult,
+} from '../utils/calculations';
 import { useMotionSystem, EASE_OUT_EXPO } from '../utils/motionVariants';
 
 const EXPERT_PROMPTS = [
-  'حلل لي استراتيجية تسعير مشروع جديد مع حماية هامش الربح',
-  'صغ لي بنداً تعاقدياً واضحاً لمنع تمدد النطاق (Scope Creep)',
-  'كيف أرد على عميل يطلب تخفيض السعر بنسبة 30% دون خسارة الصفقة؟',
-  'اقترح هيكلة دفعات مرحلية (Milestones) لمشروع تطوير تطبيق ويب',
+  'بدل وضعي من Work إلى Sleep',
+  'ابحث لي عن أعمال مناسبة في التصميم أو البرمجة للمبتدئين',
+  'أضف مهارة Figma إلى مهاراتي في الملف المهني',
+  'كيف أصيغ بند حماية النطاق (Scope Creep) في عقد التطوير؟',
 ];
 
 interface LensAIChatViewProps {
   onSelectView?: (view: ViewId) => void;
+  onExecuteTaskIntent?: (
+    intent: VoiceTaskIntentResult,
+    rawQuery: string,
+    options?: { skipNavigation?: boolean }
+  ) => void;
 }
 
-export const LensAIChatView: React.FC<LensAIChatViewProps> = () => {
+export const LensAIChatView: React.FC<LensAIChatViewProps> = ({
+  onSelectView,
+  onExecuteTaskIntent,
+}) => {
   const {
     userProfile,
     projects,
+    opportunities,
     proposals,
     financials,
+    notifications,
     chatSessions,
     saveChatSession,
     deleteChatSession,
@@ -235,20 +251,23 @@ export const LensAIChatView: React.FC<LensAIChatViewProps> = () => {
     abortControllerRef.current = controller;
 
     try {
-      const res = await fetch('/api/gemini/chat', {
+      const res = await fetch('/api/gemini/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
           message: combinedText,
+          channel: 'chat',
+          language,
           history: updatedWithUser.messages,
           linkedProject,
           userProfile,
-          workspaceContext: {
-            projectsCount: projects.length,
-            proposalsCount: proposals.length,
-            financialsCount: financials.length,
-          },
+          projects,
+          opportunities,
+          proposals,
+          financials,
+          notifications,
+          workStatus: userProfile.workStatus || 'work',
           mode,
         }),
       });
@@ -256,6 +275,21 @@ export const LensAIChatView: React.FC<LensAIChatViewProps> = () => {
         throw new Error('Request failed');
       }
       const data = await res.json();
+      const resolvedIntent: VoiceTaskIntentResult | undefined = data.taskIntent;
+      const isAction =
+        resolvedIntent && resolvedIntent.actionType !== 'unknown';
+      const needsConfirm = Boolean(
+        isAction &&
+          resolvedIntent?.requiresConfirmation &&
+          !resolvedIntent?.confirmed
+      );
+
+      if (isAction && !needsConfirm && onExecuteTaskIntent) {
+        onExecuteTaskIntent(resolvedIntent, combinedText, {
+          skipNavigation: true,
+        });
+      }
+
       const assistantMsg: ChatMessage = {
         id: `m-${Date.now() + 1}`,
         role: 'assistant',
@@ -265,6 +299,17 @@ export const LensAIChatView: React.FC<LensAIChatViewProps> = () => {
           minute: '2-digit',
         }),
         modelMode: data.modelMode || 'استدلال وتفكير عميق',
+        agentMeta: isAction
+          ? {
+              actionType: resolvedIntent.actionType,
+              executed: !needsConfirm,
+              verified: !needsConfirm,
+              requiresConfirmation: needsConfirm,
+              targetView: resolvedIntent.targetView,
+              pendingIntent: needsConfirm ? resolvedIntent : undefined,
+              rawQuery: combinedText,
+            }
+          : undefined,
       };
       await saveChatSession({
         ...updatedWithUser,
@@ -571,6 +616,121 @@ export const LensAIChatView: React.FC<LensAIChatViewProps> = () => {
                   <div className="text-xs sm:text-sm leading-relaxed whitespace-pre-line">
                     {msg.text.replace(/\*\*/g, '')}
                   </div>
+
+                  {msg.role === 'assistant' && msg.agentMeta?.actionType && (
+                    <div className="pt-2 border-t border-black/10 dark:border-white/10 flex flex-wrap items-center justify-between gap-2">
+                      {msg.agentMeta.requiresConfirmation && !msg.agentMeta.executed ? (
+                        <div className="flex flex-wrap items-center gap-2 w-full justify-between">
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#DC2626] dark:text-[#F87171]">
+                            <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                            <span>
+                              {language === 'ar'
+                                ? 'إجراء حساس — بانتظار تأكيدك'
+                                : 'Sensitive action — confirmation required'}
+                            </span>
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              data-testid="chat-confirm-action"
+                              onClick={async () => {
+                                const pending = msg.agentMeta
+                                  ?.pendingIntent as VoiceTaskIntentResult | undefined;
+                                if (pending && onExecuteTaskIntent) {
+                                  onExecuteTaskIntent(
+                                    {
+                                      ...pending,
+                                      confirmed: true,
+                                      executionTrace: [
+                                        ...(pending.executionTrace || []),
+                                        'USER_CONFIRMED',
+                                        'EXECUTE',
+                                        'VERIFY',
+                                      ],
+                                    },
+                                    msg.agentMeta?.rawQuery || '',
+                                    { skipNavigation: true }
+                                  );
+                                }
+                                if (currentSession) {
+                                  const nextMsgs = currentSession.messages.map((m) =>
+                                    m.id === msg.id
+                                      ? {
+                                          ...m,
+                                          agentMeta: {
+                                            ...m.agentMeta,
+                                            executed: true,
+                                            verified: true,
+                                            requiresConfirmation: false,
+                                          },
+                                        }
+                                      : m
+                                  );
+                                  await saveChatSession({
+                                    ...currentSession,
+                                    messages: nextMsgs,
+                                  });
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-[#DC2626] hover:bg-[#B91C1C] text-white text-[11px] font-bold"
+                            >
+                              {language === 'ar' ? 'تأكيد الحذف النهائي' : 'Confirm Delete'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (currentSession) {
+                                  const nextMsgs = currentSession.messages.map((m) =>
+                                    m.id === msg.id
+                                      ? {
+                                          ...m,
+                                          text:
+                                            language === 'ar'
+                                              ? `${m.text}\n\n[تم إلغاء الحذف بناءً على طلبك]`
+                                              : `${m.text}\n\n[Action cancelled]`,
+                                          agentMeta: undefined,
+                                        }
+                                      : m
+                                  );
+                                  await saveChatSession({
+                                    ...currentSession,
+                                    messages: nextMsgs,
+                                  });
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#262934] border border-[#E5E5EA] dark:border-white/15 text-[11px] font-semibold text-[#515154] dark:text-[#CBD5E1]"
+                            >
+                              {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <span
+                            data-testid="chat-action-verified-badge"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold"
+                          >
+                            <CheckCircle2 className="w-3 h-3 shrink-0" />
+                            <span>
+                              {language === 'ar'
+                                ? `نُفِّذ وتحُقِّق (${msg.agentMeta.actionType})`
+                                : `Executed & Verified (${msg.agentMeta.actionType})`}
+                            </span>
+                          </span>
+                          {msg.agentMeta.targetView && onSelectView && (
+                            <button
+                              type="button"
+                              onClick={() => onSelectView(msg.agentMeta!.targetView!)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#0066CC]/10 hover:bg-[#0066CC]/20 text-[#0066CC] dark:text-[#60A5FA] text-[11px] font-bold"
+                            >
+                              <span>{language === 'ar' ? 'فتح القسم' : 'Open Section'}</span>
+                              <ArrowUpLeft className="w-3 h-3" />
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
 
                   {msg.role === 'assistant' && (
                     <div className="pt-1 flex items-center justify-end gap-2">

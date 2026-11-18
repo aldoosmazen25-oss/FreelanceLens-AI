@@ -71,10 +71,16 @@ export interface OpportunityItem {
   id: string;
   title: string;
   description: string;
-  platform: 'Upwork' | 'Fiverr Pro' | 'Freelancer.com' | 'مشروع مباشر';
+  platform: 'Upwork' | 'Fiverr Pro' | 'Freelancer.com' | 'Mostaql' | 'Khamsat' | 'مشروع مباشر' | string;
   budget: string;
+  budgetMinUsd?: number;
+  budgetMaxUsd?: number;
+  category?: 'design_ui' | 'software_ai' | 'writing_translation' | 'marketing_seo' | 'general' | string;
+  experienceLevel?: 'beginner' | 'intermediate' | 'expert';
   postedAt: string;
+  postedHoursAgo?: number;
   matchScore: number;
+  matchReasons?: string[];
   skills: string[];
   clientRating: number;
   saved?: boolean;
@@ -112,12 +118,23 @@ export interface FinancialTransaction {
   projectTitle?: string;
 }
 
+export interface ChatMessageAgentMeta {
+  actionType?: string;
+  executed?: boolean;
+  verified?: boolean;
+  requiresConfirmation?: boolean;
+  targetView?: ViewId;
+  pendingIntent?: unknown;
+  rawQuery?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
   timestamp: string;
   modelMode?: string;
+  agentMeta?: ChatMessageAgentMeta;
 }
 
 export interface ChatSession {
@@ -258,6 +275,7 @@ export interface UserProfile {
   hourlyRate: number;
   currency: string;
   availability: string;
+  workStatus?: 'work' | 'sleep';
   avatarUrl?: string;
   education?: EducationData;
   skills: SkillItem[];

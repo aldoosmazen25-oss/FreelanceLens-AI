@@ -5,11 +5,26 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { WebSocketServer } from 'ws';
-import { GoogleGenAI, ThinkingLevel, Type, Modality, LiveServerMessage } from '@google/genai';
+import {
+  GoogleGenAI,
+  ThinkingLevel,
+  Type,
+  Modality,
+  LiveServerMessage,
+  type FunctionDeclaration,
+} from '@google/genai';
 import {
   resolveVoiceAgentTaskIntent,
   buildHonestAIProfileContext,
 } from './src/utils/calculations.ts';
+import {
+  discoverSmartOpportunities,
+  understandIntelligentAgentRequest,
+  FIREWORK_MARKETPLACE_CATALOG,
+  type AgentChannel,
+  type AgentContextSnapshot,
+  type IntelligentIntentResult,
+} from './src/utils/agentEngine.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -85,6 +100,686 @@ async function generateWithFallback(
     }
   }
   throw lastError || new Error('All models in fallback chain failed');
+}
+
+const FIREWORK_AGENT_TOOLS: FunctionDeclaration[] = [
+  {
+    name: 'set_work_status',
+    description:
+      'Switch the user workspace availability mode between Work (available for projects) and Sleep (paused/resting/unavailable). Use for any request in Arabic, dialects, or English to toggle work/sleep status or availability.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        status: {
+          type: Type.STRING,
+          description: 'Must be "work" or "sleep".',
+        },
+      },
+      required: ['status'],
+    },
+  },
+  {
+    name: 'manage_skills',
+    description: 'Add or remove a professional skill in the user profile.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        operation: { type: Type.STRING, description: '"add" or "remove"' },
+        skillName: { type: Type.STRING, description: 'Exact skill name, e.g. Figma, React, Copywriting' },
+        level: { type: Type.STRING, description: 'خبير, متقدم, متوسط, or مبتدئ' },
+      },
+      required: ['operation', 'skillName'],
+    },
+  },
+  {
+    name: 'update_profile',
+    description: 'Update user profile details such as hourlyRate, title, bio, or availability.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        hourlyRate: { type: Type.NUMBER, description: 'Hourly rate in USD' },
+        title: { type: Type.STRING, description: 'Professional headline/title' },
+        bio: { type: Type.STRING, description: 'Professional bio summary' },
+        availability: { type: Type.STRING, description: 'Availability label' },
+      },
+    },
+  },
+  {
+    name: 'discover_opportunities',
+    description:
+      'Search the real Firework database of freelance projects matching user skills, level, category, budget, or recency. Never invent fake jobs.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: { type: Type.STRING, description: 'Original user search query' },
+        category: {
+          type: Type.STRING,
+          description: 'all | software_ai | design_ui | writing_translation | marketing_seo',
+        },
+        level: { type: Type.STRING, description: 'all | beginner | intermediate | expert' },
+        minBudget: { type: Type.NUMBER, description: 'Minimum budget in USD' },
+        maxBudget: { type: Type.NUMBER, description: 'Maximum budget in USD' },
+        sortBy: { type: Type.STRING, description: 'match | newest' },
+        bestOnly: { type: Type.BOOLEAN, description: 'True if user asked for best match only' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'update_project_status',
+    description: 'Update the status of a saved project in the Kanban board.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        projectTitleKeyword: { type: Type.STRING },
+        newStatus: {
+          type: Type.STRING,
+          description: 'new | analyzed | proposed | waiting | in_progress | completed | archived',
+        },
+      },
+      required: ['newStatus'],
+    },
+  },
+  {
+    name: 'delete_project',
+    description: 'Delete a saved project. Destructive action requiring confirmation.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        projectTitleKeyword: { type: Type.STRING },
+      },
+    },
+  },
+  {
+    name: 'inspect_project',
+    description: 'Open and inspect details of a saved project.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        projectTitleKeyword: { type: Type.STRING },
+      },
+    },
+  },
+  {
+    name: 'save_project',
+    description: 'Save a new project card into the Kanban workspace.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING },
+        budget: { type: Type.STRING },
+        description: { type: Type.STRING },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'analyze_project',
+    description: 'Analyze a freelance project brief for deliverables, risks, and match score.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING },
+        description: { type: Type.STRING },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'generate_proposal',
+    description: 'Generate a competitive milestone proposal draft in Proposal Studio.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING },
+        budget: { type: Type.STRING },
+        duration: { type: Type.STRING },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'open_pricing',
+    description: 'Open the smart pricing calculator.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: { title: { type: Type.STRING } },
+    },
+  },
+  {
+    name: 'add_financial_record',
+    description: 'Record a revenue payment or expense transaction in Financials.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        type: { type: Type.STRING, description: 'revenue or expense' },
+        amount: { type: Type.NUMBER },
+        title: { type: Type.STRING },
+      },
+      required: ['type', 'amount'],
+    },
+  },
+  {
+    name: 'set_theme',
+    description: 'Switch UI theme to dark, light, or toggle.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        themeMode: { type: Type.STRING, description: 'dark | light | toggle' },
+      },
+      required: ['themeMode'],
+    },
+  },
+  {
+    name: 'set_language',
+    description: 'Change app interface language (ar, en, fr, es, de, tr, ru, zh, ja, hi, pt, ko).',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        languageCode: { type: Type.STRING },
+      },
+      required: ['languageCode'],
+    },
+  },
+  {
+    name: 'control_timer',
+    description: 'Start, stop, or reset the live focus/earnings timer.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: { type: Type.STRING, description: 'start | stop | reset' },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'start_tour',
+    description: 'Launch the interactive product tour.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: 'manage_notifications',
+    description: 'Check or mark all notifications/inbox alerts as read.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        operation: { type: Type.STRING, description: 'check or clear' },
+      },
+      required: ['operation'],
+    },
+  },
+  {
+    name: 'navigate_to_view',
+    description:
+      'Navigate to any section of Firework AI: overview, opportunities, project-analyzer, proposal-studio, pricing-calculator, saved-projects, lens-chat, financials, profile, settings, user-guide, resume-analyzer, portfolio, file-analysis, google-forms, proposal-analytics, platform-connections, notifications.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        viewId: { type: Type.STRING },
+      },
+      required: ['viewId'],
+    },
+  },
+  {
+    name: 'get_workspace_summary',
+    description: 'Summarize user work/sleep status, projects count, skills, and hourly rate.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+];
+
+function mapFunctionCallToIntent(
+  fnName: string,
+  args: Record<string, any> = {},
+  rawMessage: string,
+  context: AgentContextSnapshot
+): IntelligentIntentResult {
+  const emptyBrief = {
+    title: '',
+    platform: 'Upwork',
+    description: '',
+    budget: '$1,000',
+    deadline: '14 يوماً',
+  };
+  const trace = ['UNDERSTAND', 'ANALYZE', 'GEMINI_FUNCTION_CALL', 'EXECUTE', 'VERIFY', 'RESPOND'];
+
+  switch (fnName) {
+    case 'set_work_status': {
+      const targetMode: 'work' | 'sleep' =
+        String(args.status || '').toLowerCase() === 'sleep' ? 'sleep' : 'work';
+      return {
+        actionType: 'set_work_status',
+        targetView: 'overview',
+        domainCategory: 'general',
+        searchKeywords: ['workStatus', targetMode],
+        statusSequence: ['Thinking...'],
+        generatedOpportunities: [],
+        generatedProjectBrief: emptyBrief,
+        workStatus: targetMode,
+        executionTrace: trace,
+        spokenSummaryAr:
+          targetMode === 'sleep'
+            ? 'تم تحويل وضعك إلى Sleep وإيقاف التوفر لاستقبال مشاريع جديدة حالياً. تم التحقق من تحديث الحالة.'
+            : 'تم تحويل وضعك إلى Work وتفعيل توفرك لاستقبال المشاريع الجديدة الآن.',
+        spokenSummaryEn:
+          targetMode === 'sleep'
+            ? 'Switched your mode to Sleep and paused work availability.'
+            : 'Switched your mode to Work and marked you available.',
+      };
+    }
+
+    case 'manage_skills': {
+      const op = String(args.operation || 'add').toLowerCase() === 'remove' ? 'remove' : 'add';
+      const skillName = String(args.skillName || '').trim() || 'TypeScript';
+      const level = (['خبير', 'متقدم', 'متوسط', 'مبتدئ'].includes(String(args.level))
+        ? args.level
+        : 'متقدم') as 'خبير' | 'متقدم' | 'متوسط' | 'مبتدئ';
+      return {
+        actionType: 'manage_skills',
+        targetView: 'profile',
+        domainCategory: 'general',
+        searchKeywords: ['skill', op, skillName],
+        statusSequence: ['Thinking...', 'Planning...'],
+        generatedOpportunities: [],
+        generatedProjectBrief: emptyBrief,
+        skillMutation: { operation: op, skillName, level },
+        executionTrace: trace,
+        spokenSummaryAr:
+          op === 'add'
+            ? `تمت إضافة مهارة "${skillName}" إلى ملفك المهني والتحقق من حفظها.`
+            : `تمت إزالة مهارة "${skillName}" من ملفك المهني.`,
+        spokenSummaryEn:
+          op === 'add'
+            ? `Added "${skillName}" to your profile skills.`
+            : `Removed "${skillName}" from your profile skills.`,
+      };
+    }
+
+    case 'update_profile': {
+      const hourlyRate = args.hourlyRate ? Number(args.hourlyRate) : undefined;
+      return {
+        actionType: 'update_profile',
+        targetView: 'profile',
+        domainCategory: 'general',
+        searchKeywords: ['profile'],
+        statusSequence: ['Thinking...', 'Planning...'],
+        generatedOpportunities: [],
+        generatedProjectBrief: emptyBrief,
+        profileUpdates: {
+          ...(hourlyRate ? { hourlyRate } : {}),
+          ...(args.title ? { title: String(args.title) } : {}),
+          ...(args.bio ? { bio: String(args.bio) } : {}),
+          ...(args.availability ? { availability: String(args.availability) } : {}),
+        },
+        executionTrace: trace,
+        spokenSummaryAr: hourlyRate
+          ? `تم تحديث سعر ساعتك المهنية إلى $${hourlyRate}/ساعة والتحقق من حفظه.`
+          : 'تم تحديث بيانات ملفك المهني وحفظها بنجاح.',
+        spokenSummaryEn: hourlyRate
+          ? `Updated your hourly rate to $${hourlyRate}/hr.`
+          : 'Updated your professional profile.',
+      };
+    }
+
+    case 'discover_opportunities': {
+      const discovery = discoverSmartOpportunities(
+        String(args.query || rawMessage),
+        context.userProfile,
+        context.opportunities || [],
+        {
+          category: (args.category as any) || 'all',
+          level: (args.level as any) || 'all',
+          minBudget: typeof args.minBudget === 'number' ? args.minBudget : undefined,
+          maxBudget: typeof args.maxBudget === 'number' ? args.maxBudget : undefined,
+          sortBy: args.sortBy === 'newest' ? 'newest' : 'match',
+          bestOnly: Boolean(args.bestOnly),
+        }
+      );
+      const top = discovery.voiceOpportunities[0];
+      return {
+        actionType: 'scout_opportunities',
+        targetView: 'opportunities',
+        domainCategory:
+          discovery.filters.category === 'all' ? 'general' : discovery.filters.category,
+        searchKeywords: [String(args.query || rawMessage)],
+        statusSequence: ['Thinking...', 'Searching...', 'Planning...'],
+        generatedOpportunities: discovery.voiceOpportunities,
+        generatedProjectBrief: top
+          ? {
+              title: top.title,
+              platform: top.platform,
+              description: top.description,
+              budget: top.budget,
+              deadline: top.deadline,
+            }
+          : emptyBrief,
+        discoveryFilters: discovery.filters,
+        executionTrace: trace,
+        spokenSummaryAr: discovery.summaryAr,
+        spokenSummaryEn: discovery.summaryEn,
+      };
+    }
+
+    case 'delete_project': {
+      const kw = String(args.projectTitleKeyword || '').trim();
+      const matched = (context.projects || []).find(
+        (p) => p.title && (!kw || p.title.toLowerCase().includes(kw.toLowerCase()))
+      );
+      const title = matched?.title || kw || context.projects?.[0]?.title || 'المشروع المحدد';
+      return {
+        actionType: 'delete_project',
+        targetView: 'saved-projects',
+        domainCategory: 'general',
+        searchKeywords: ['delete', title],
+        statusSequence: ['Thinking...'],
+        generatedOpportunities: [],
+        generatedProjectBrief: emptyBrief,
+        projectDeleteTarget: { projectId: matched?.id, projectTitleKeyword: title },
+        requiresConfirmation: true,
+        confirmed: false,
+        executionTrace: ['UNDERSTAND', 'ANALYZE', 'GEMINI_FUNCTION_CALL', 'REQUEST_CONFIRMATION'],
+        spokenSummaryAr: `هذا إجراء حساس غير قابل للتراجع: هل تؤكد رغبتك في حذف المشروع "${title}" نهائياً؟`,
+        spokenSummaryEn: `Confirm destructive action: permanently delete project "${title}"?`,
+      };
+    }
+
+    case 'update_project_status': {
+      const kw = String(args.projectTitleKeyword || '').trim();
+      const matched = (context.projects || []).find(
+        (p) => p.title && (!kw || p.title.toLowerCase().includes(kw.toLowerCase()))
+      ) || context.projects?.[0];
+      const newStatus = (args.newStatus || 'in_progress') as any;
+      return {
+        actionType: 'update_project_status',
+        targetView: 'saved-projects',
+        domainCategory: 'general',
+        searchKeywords: ['status', newStatus],
+        statusSequence: ['Thinking...', 'Planning...'],
+        generatedOpportunities: [],
+        generatedProjectBrief: emptyBrief,
+        projectStatusUpdate: {
+          projectId: matched?.id,
+          projectTitleKeyword: matched?.title || kw,
+          newStatus,
+        },
+        executionTrace: trace,
+        spokenSummaryAr: matched
+          ? `تم تحديث حالة المشروع "${matched.title}" إلى "${newStatus}" والتحقق منه في لوحة مشاريعك.`
+          : `فتحت لك لوحة المشاريع لإدارة الحالات.`,
+        spokenSummaryEn: matched
+          ? `Updated "${matched.title}" status to ${newStatus}.`
+          : 'Opened My Projects board.',
+      };
+    }
+
+    case 'inspect_project': {
+      const kw = String(args.projectTitleKeyword || '').trim();
+      const found = (context.projects || []).find(
+        (p) => p.title && (!kw || p.title.toLowerCase().includes(kw.toLowerCase()))
+      );
+      return {
+        actionType: 'inspect_project',
+        targetView: found ? 'project-analyzer' : 'saved-projects',
+        domainCategory: 'general',
+        searchKeywords: ['inspect', kw],
+        statusSequence: ['Thinking...', 'Searching...'],
+        generatedOpportunities: [],
+        generatedProjectBrief: emptyBrief,
+        inspectTarget: { projectId: found?.id, titleKeyword: found?.title || kw },
+        executionTrace: trace,
+        spokenSummaryAr: found
+          ? `عرضت لك تفاصيل المشروع "${found.title}" في محلل المشاريع.`
+          : 'فتحت لك لوحة المشاريع المحفوظة لاستعراض التفاصيل.',
+        spokenSummaryEn: found ? `Opened details for "${found.title}".` : 'Opened My Projects.',
+      };
+    }
+
+    case 'save_project':
+      return understandIntelligentAgentRequest(`احفظ مشروع ${args.title || rawMessage}`, context);
+    case 'analyze_project':
+      return understandIntelligentAgentRequest(`حلل مشروع ${args.title || rawMessage}`, context);
+    case 'generate_proposal':
+      return understandIntelligentAgentRequest(`اكتب عرض سعر ${args.title || rawMessage}`, context);
+    case 'open_pricing':
+      return understandIntelligentAgentRequest(`احسب تسعير ${args.title || rawMessage}`, context);
+    case 'add_financial_record':
+      return understandIntelligentAgentRequest(
+        `${args.type === 'expense' ? 'سجل مصروف' : 'سجل ربح'} ${args.amount || 500}`,
+        context
+      );
+    case 'set_theme':
+      return understandIntelligentAgentRequest(
+        args.themeMode === 'dark'
+          ? 'فعل الوضع الليلي'
+          : args.themeMode === 'light'
+          ? 'فعل الوضع الفاتح'
+          : 'بدل المظهر',
+        context
+      );
+    case 'set_language':
+      return {
+        actionType: 'set_language',
+        targetView: 'overview',
+        domainCategory: 'general',
+        searchKeywords: ['language', String(args.languageCode || 'ar')],
+        statusSequence: ['Thinking...'],
+        generatedOpportunities: [],
+        generatedProjectBrief: emptyBrief,
+        languageCode: (args.languageCode || 'ar') as any,
+        executionTrace: trace,
+        spokenSummaryAr: `تم تغيير لغة الواجهة إلى (${args.languageCode || 'ar'}) بنجاح.`,
+        spokenSummaryEn: `Changed interface language to ${args.languageCode || 'ar'}.`,
+      };
+    case 'control_timer':
+      return understandIntelligentAgentRequest(
+        args.action === 'stop'
+          ? 'أوقف المؤقت'
+          : args.action === 'reset'
+          ? 'صفر المؤقت'
+          : 'شغل مؤقت التركيز',
+        context
+      );
+    case 'start_tour':
+      return understandIntelligentAgentRequest('شغل الجولة التعريفية', context);
+    case 'manage_notifications':
+      return understandIntelligentAgentRequest(
+        args.operation === 'clear' ? 'علم الإشعارات كمقروءة' : 'اعرض الإشعارات',
+        context
+      );
+    case 'get_workspace_summary':
+      return understandIntelligentAgentRequest('ملخص حسابي', context);
+    case 'navigate_to_view': {
+      const validViews = new Set([
+        'overview',
+        'opportunities',
+        'project-analyzer',
+        'proposal-studio',
+        'pricing-calculator',
+        'saved-projects',
+        'lens-chat',
+        'financials',
+        'profile',
+        'settings',
+        'user-guide',
+        'resume-analyzer',
+        'portfolio',
+        'file-analysis',
+        'google-forms',
+        'proposal-analytics',
+        'platform-connections',
+        'notifications',
+      ]);
+      const targetView = (validViews.has(String(args.viewId)) ? args.viewId : 'overview') as any;
+      return {
+        actionType: 'navigate_view',
+        targetView,
+        domainCategory: 'general',
+        searchKeywords: [targetView],
+        statusSequence: ['Thinking...'],
+        generatedOpportunities: [],
+        generatedProjectBrief: emptyBrief,
+        executionTrace: trace,
+        spokenSummaryAr: `تم الانتقال إلى قسم (${targetView}) في التطبيق الآن.`,
+        spokenSummaryEn: `Navigated to ${targetView}.`,
+      };
+    }
+    default:
+      return understandIntelligentAgentRequest(rawMessage, context);
+  }
+}
+
+async function runUnifiedFireworkAgent(params: {
+  message: string;
+  history?: any[];
+  channel: AgentChannel;
+  language?: string;
+  userProfile?: any;
+  projects?: any[];
+  opportunities?: any[];
+  proposals?: any[];
+  financials?: any[];
+  notifications?: any[];
+  workStatus?: 'work' | 'sleep';
+  linkedProject?: any;
+}) {
+  const {
+    message = '',
+    history = [],
+    channel = 'chat',
+    language = 'ar',
+    userProfile = {},
+    projects = [],
+    opportunities = [],
+    proposals = [],
+    financials = [],
+    notifications = [],
+    workStatus,
+    linkedProject = null,
+  } = params;
+
+  const clean = String(message || '').trim();
+  const realDbOpps = opportunities.length > 0 ? opportunities : FIREWORK_MARKETPLACE_CATALOG;
+  const contextSnapshot: AgentContextSnapshot = {
+    userProfile,
+    projects,
+    opportunities: realDbOpps,
+    proposals,
+    financials,
+    notifications,
+    workStatus: workStatus || userProfile.workStatus || 'work',
+    channel,
+    language,
+  };
+
+  // Step 1: Deterministic fast NLU & dialect analysis first
+  let taskIntent = understandIntelligentAgentRequest(clean, contextSnapshot);
+  let modelMode = 'متوازن ودقيق';
+
+  // Step 2: If no deterministic rule matched, use Gemini Function Calling (gemini-4-hydrogen)
+  // to understand subtle Arabic dialects, typos, multi-turn context, or conversational queries.
+  if (clean && taskIntent.actionType === 'unknown') {
+    const honestProfileContext = buildHonestAIProfileContext(userProfile);
+    const activeStatus = contextSnapshot.workStatus === 'sleep' ? 'Sleep (غير متاح للعمل)' : 'Work (متاح للعمل)';
+    const systemInstruction = `أنت "Firework AI / Lens AI" — الوكيل الذكي الرسمي داخل منصة Firework للعمل الحر.
+أنت تتحكم بالتطبيق وتنفذ المهام فعلياً عبر الأدوات المرفقة (Function Calling).
+القاعدة الذهبية: افهم نية المستخدم (سواء بالفصحى أو اللهجات العامية أو الأخطاء الإملائية أو الإنجليزية) واستدعِ الأداة المناسبة فوراً بدلاً من قول "لا أعرف" إذا كان الطلب يمكن تنفيذه داخل التطبيق.
+
+بيانات الجلسة الحقيقية الحالية:
+- الحالة الحالية للمستخدم: ${activeStatus}
+- عدد المشاريع المحفوظة: ${projects.length} (${projects.slice(0, 3).map((p: any) => p.title).join('، ') || 'لا يوجد'})
+- عدد الإشعارات غير المقروءة: ${notifications.filter((n: any) => !n.read).length}
+${honestProfileContext}
+${
+  linkedProject
+    ? `\nالمشروع المرتبط حالياً: ${linkedProject.title} (${linkedProject.platform} · ${linkedProject.budget})`
+    : ''
+}
+
+توجيهات خاصة:
+- إذا طلب تبديل الوضع بين Work و Sleep أو تغيير التوفر (مثل "وقف استقبالي" أو "خليني متاح" أو "ما بدي أكون متاح"): استدعِ set_work_status.
+- إذا بحث عن أعمال/مشاريع/فرص بأي تخصص أو مستوى أو ميزانية: استدعِ discover_opportunities (نبحث فقط في قاعدة بيانات المنصة دون اختلاق).
+- إذا أراد إضافة أو حذف مهارة: استدعِ manage_skills.
+- إذا أراد تغيير سعر الساعة أو المسمى المهني: استدعِ update_profile.
+- إذا أراد حذف مشروع: استدعِ delete_project (يُطلب التأكيد قبل التنفيذ).
+- إذا كانت الرسالة استشارة مهنية (تسعير، عقود، تفاوض، عروض) في المحادثة النصية، قدّم إجابة احترافية مخصصة لملف المستخدم.
+- إذا كانت الرسالة سؤالاً عشوائياً خارج نطاق العمل الحر والتطبيق تماماً في قناة الصوت (Voice) ولا توجد أداة له، لا تستدعِ أداة وأجب فقط بـ "لا أعرف." (أو "I don't know.").`;
+
+    try {
+      const ai = getGenAIClient();
+      const contents = [
+        ...history.slice(-8).map((m: any) => ({
+          role: m.role === 'user' ? 'user' : 'model',
+          parts: [{ text: String(m.text || '') }],
+        })),
+        { role: 'user', parts: [{ text: clean }] },
+      ];
+
+      const response = await withTimeout(
+        ai.models.generateContent({
+          model: 'gemini-4-hydrogen',
+          contents,
+          config: {
+            systemInstruction,
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            tools: [{ functionDeclarations: FIREWORK_AGENT_TOOLS }],
+          },
+        }),
+        14000
+      );
+
+      const fnCalls = response.functionCalls;
+      if (fnCalls && fnCalls.length > 0) {
+        const firstCall = fnCalls[0];
+        taskIntent = mapFunctionCallToIntent(
+          firstCall.name || '',
+          (firstCall.args as Record<string, any>) || {},
+          clean,
+          contextSnapshot
+        );
+        modelMode = 'استدلال الوكيل الذكي · Function Calling';
+      } else if (channel === 'chat' && (response.text || '').trim()) {
+        const reply = (response.text || '').trim();
+        return {
+          reply,
+          replyText: reply,
+          modelMode: 'متوازن ودقيق',
+          taskIntent,
+        };
+      }
+    } catch {
+      if (channel === 'chat') {
+        const projectRef = linkedProject ? ` بخصوص مشروع "${linkedProject.title}"` : '';
+        const fallbackChat = `مرحباً ${userProfile.name || 'بك'}، معك **Firework AI (Lens AI)**${projectRef}.\n\nبصفتي وكيلك الذكي داخل المنصة، يمكنك سؤالي استشارياً أو إعطائي أوامر مباشرة لتنفيذها داخل التطبيق، مثل:\n• "بدل وضعي من Work إلى Sleep"\n• "ابحث لي عن أعمال مناسبة في التصميم للمبتدئين"\n• "أضف مهارة Figma إلى مهاراتي"\n• "غيّر حالة مشروعي إلى قيد التنفيذ"`;
+        return {
+          reply: fallbackChat,
+          replyText: fallbackChat,
+          modelMode: 'متوازن ودقيق',
+          taskIntent,
+        };
+      }
+    }
+  }
+
+  const finalReply =
+    taskIntent.actionType === 'unknown'
+      ? language === 'en'
+        ? "I don't know."
+        : 'لا أعرف.'
+      : language === 'en'
+      ? taskIntent.spokenSummaryEn
+      : taskIntent.spokenSummaryAr;
+
+  return {
+    reply: finalReply,
+    replyText: finalReply,
+    modelMode,
+    taskIntent,
+  };
 }
 
 async function startServer() {
@@ -505,7 +1200,7 @@ ${honestProfileContext}
     }
   });
 
-  // 5. Live Voice Turn Endpoint (/api/gemini/live-voice-turn)
+  // 5. Live Voice Turn Endpoint (/api/gemini/live-voice-turn) — Unified Intelligent Agent
   app.post('/api/gemini/live-voice-turn', async (req, res) => {
     const {
       transcript: incomingTranscript = '',
@@ -513,12 +1208,19 @@ ${honestProfileContext}
       mimeType = 'audio/webm',
       language = 'ar',
       voiceName = 'Kore',
+      userProfile = {},
+      projects = [],
+      opportunities = [],
+      proposals = [],
+      financials = [],
+      notifications = [],
+      workStatus,
+      history = [],
     } = req.body || {};
 
     const ai = getGenAIClient();
     let userText = (incomingTranscript || '').trim();
 
-    // Step 1: If raw audio was sent without transcript, transcribe with gemini-3.5-transcribe
     if (!userText && audioBase64) {
       try {
         const transRes = await withTimeout(
@@ -539,85 +1241,27 @@ ${honestProfileContext}
       }
     }
 
-    let taskIntent = resolveVoiceAgentTaskIntent(userText);
-    let modelMode = 'سريع ومباشر';
+    const agentResult = await runUnifiedFireworkAgent({
+      message: userText,
+      history,
+      channel: 'voice',
+      language,
+      userProfile,
+      projects,
+      opportunities,
+      proposals,
+      financials,
+      notifications,
+      workStatus,
+    });
 
-    // Step 2: If deterministic command parser returned 'unknown' and userText is non-empty,
-    // ask Gemini whether the user phrased a supported in-app command in natural language, or if it is unknown.
-    if (userText && taskIntent.actionType === 'unknown') {
-      try {
-        const classifyPrompt = `أنت مصنف أوامر تطبيق Firework AI الصوتي.
-حدد ما إذا كان كلام المستخدم يطلب تنفيذ أمر فعلي مدعوم داخل التطبيق أم أنه سؤال/طلب غير معروف خارج أوامر التطبيق.
-الأوامر المدعومة فقط في التطبيق هي:
-- البحث عن فرص عمل حر (مثل: "ابحث عن عمل كتابة وترجمة"، "ابحث عن مشاريع برمجة أو تصميم")
-- تحليل مشروع أو عقد ("حلل مشروع...")
-- كتابة أو صياغة عرض سعر ("اكتب عرض سعر...")
-- حفظ أو إضافة مشروع جديد ("احفظ مشروع...")
-- حساب تسعير مشروع ("احسب تسعير...")
-- تسجيل دفعة ربح أو مصروف مالي ("سجل ربح 500"، "سجل مصروف 100")
-- تغيير المظهر إلى الوضع الليلي أو الفاتح ("فعل الوضع الليلي"، "فعل الوضع الفاتح")
-- تغيير لغة التطبيق ("غير اللغة إلى الإنجليزية"، "حول اللغة للعربية")
-- تشغيل أو إيقاف أو تصفير مؤقت التركيز ("شغل مؤقت التركيز"، "أوقف المؤقت"، "صفر المؤقت")
-- تشغيل الجولة التعريفية ("شغل الجولة التعريفية")
-- تعليم الإشعارات كمقروءة ("علم الإشعارات كمقروءة")
-- فتح صفحة من صفحات التطبيق ("افتح الإعدادات"، "افتح ملفي المهني"، "افتح مشاريعي"، "افتح المالية"، "افتح السيرة الذاتية"، "افتح معرض الأعمال"، "افتح تحليلات العروض"، "افتح المنصات"، "افتح الوارد"، "افتح دليل المستخدم"، "افتح الرئيسية")
-
-إذا كان كلام المستخدم يطلب أحد هذه الأوامر صراحةً، أعد في حقل canonicalCommand جملة الأمر المباشرة (مثل "افتح الإعدادات" أو "فعل الوضع الليلي").
-أما إذا كان كلام المستخدم سؤالاً عاماً خارج أوامر التطبيق أو شيئاً لا تعرف كيف تنفذه كأمر داخل التطبيق، أعد في حقل canonicalCommand القيمة "UNKNOWN" حصراً.
-
-كلام المستخدم: "${userText}"`;
-
-        const { response, modelMode: mode } = await generateWithFallback(
-          'fast',
-          async (model) => {
-            return ai.models.generateContent({
-              model,
-              contents: classifyPrompt,
-              config: {
-                responseMimeType: 'application/json',
-                responseSchema: {
-                  type: Type.OBJECT,
-                  properties: {
-                    canonicalCommand: { type: Type.STRING },
-                  },
-                  required: ['canonicalCommand'],
-                },
-              },
-            });
-          }
-        );
-        modelMode = mode;
-        const parsed = JSON.parse(response.text || '{}');
-        if (
-          parsed.canonicalCommand &&
-          parsed.canonicalCommand !== 'UNKNOWN'
-        ) {
-          const remapped = resolveVoiceAgentTaskIntent(parsed.canonicalCommand);
-          if (remapped.actionType !== 'unknown') {
-            taskIntent = remapped;
-          }
-        }
-      } catch {
-        // Keep taskIntent as 'unknown' ("لا أعرف.")
-      }
-    }
-
-    const replyText =
-      taskIntent.actionType === 'unknown'
-        ? language === 'en'
-          ? "I don't know."
-          : 'لا أعرف.'
-        : language === 'en'
-        ? taskIntent.spokenSummaryEn
-        : taskIntent.spokenSummaryAr;
-
-    // Step 3: Convert replyText to human speech via gemini-3.8-flash-lite-tts / gemini-3.8-flash-tts
+    const replyText = agentResult.replyText;
     let ttsAudioBase64: string | null = null;
     try {
       const ttsRes = await withTimeout(
         ai.models.generateContent({
           model: 'gemini-3.8-flash-lite-tts',
-          contents: [{ role: 'user', parts: [{ text: replyText }] }],
+          contents: [{ role: 'user', parts: [{ text: replyText.slice(0, 1200) }] }],
           config: {
             responseModalities: ['AUDIO'],
             speechConfig: {
@@ -635,7 +1279,7 @@ ${honestProfileContext}
         const ttsRes2 = await withTimeout(
           ai.models.generateContent({
             model: 'gemini-3.8-flash-tts',
-            contents: [{ role: 'user', parts: [{ text: replyText }] }],
+            contents: [{ role: 'user', parts: [{ text: replyText.slice(0, 1200) }] }],
             config: {
               responseModalities: ['AUDIO'],
               speechConfig: {
@@ -658,9 +1302,21 @@ ${honestProfileContext}
       replyText,
       audioBase64: ttsAudioBase64,
       mimeType: 'audio/wav',
-      modelMode,
-      taskIntent,
+      modelMode: agentResult.modelMode,
+      taskIntent: agentResult.taskIntent,
     });
+  });
+
+  // 5b. Unified Firework Intelligent Agent Endpoint (/api/gemini/agent) for Chat, Dynamic Island & Voice
+  app.post('/api/gemini/agent', async (req, res) => {
+    try {
+      const result = await runUnifiedFireworkAgent(req.body || {});
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({
+        error: err?.message || 'Agent request failed',
+      });
+    }
   });
 
   // 6. Pricing Advice Endpoint

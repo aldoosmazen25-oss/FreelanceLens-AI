@@ -69,8 +69,15 @@ function FireworkAIWorkspace() {
   } = useLanguage();
   const {
     userProfile,
+    updateUserProfile,
+    setWorkStatus,
+    addSkillsToProfile,
+    removeSkillFromProfile,
+    projects,
     notifications,
     saveProject,
+    updateProjectStatus,
+    deleteProject,
     saveProposal,
     addFinancialTransaction,
     markAllNotificationsRead,
@@ -97,15 +104,202 @@ function FireworkAIWorkspace() {
 
   const handleExecuteVoiceTaskIntent = (
     intent: VoiceTaskIntentResult,
-    rawQuery: string
+    rawQuery: string,
+    options?: { skipNavigation?: boolean }
   ) => {
     const msg =
       language === 'ar' ? intent.spokenSummaryAr : intent.spokenSummaryEn;
+    const shouldNavigate = !options?.skipNavigation;
 
-    // If the voice assistant does not recognize the command, only report "لا أعرف." / "I don't know."
+    // 1. Unknown intent: never execute speculative mutations
     if (intent.actionType === 'unknown') {
       setDynamicIslandMessage(msg);
       setDynamicIslandPhase('result');
+      return;
+    }
+
+    // 2. Toggle Work / Sleep Mode globally & verify availability
+    if (intent.actionType === 'set_work_status') {
+      const targetMode: 'work' | 'sleep' =
+        intent.workStatus === 'sleep' ? 'sleep' : 'work';
+      void setWorkStatus(targetMode);
+      if (targetMode === 'work' && !isFocusRunning) {
+        toggleFocusTimer();
+      } else if (targetMode === 'sleep' && isFocusRunning) {
+        toggleFocusTimer();
+      }
+      setDynamicIslandMessage(msg);
+      setDynamicIslandPhase('result');
+      addNotification({
+        title:
+          language === 'ar'
+            ? `تبديل الوضع إلى ${targetMode === 'sleep' ? 'Sleep' : 'Work'}`
+            : `Mode Switched to ${targetMode === 'sleep' ? 'Sleep' : 'Work'}`,
+        message: msg,
+        type: 'success',
+        targetView: 'overview',
+      });
+      return;
+    }
+
+    // 3. Profile Updates (hourly rate, title, bio, availability)
+    if (intent.actionType === 'update_profile' && intent.profileUpdates) {
+      void updateUserProfile(intent.profileUpdates);
+      setDynamicIslandMessage(msg);
+      setDynamicIslandPhase('result');
+      addNotification({
+        title:
+          language === 'ar'
+            ? 'Firework AI · تم تحديث الملف المهني'
+            : 'Firework AI · Profile Updated',
+        message: msg,
+        type: 'success',
+        targetView: 'profile',
+      });
+      if (shouldNavigate) {
+        handleSelectViewWithPush('profile');
+      }
+      return;
+    }
+
+    // 4. Manage Skills (add / remove)
+    if (intent.actionType === 'manage_skills' && intent.skillMutation) {
+      const { operation, skillName, level } = intent.skillMutation;
+      if (operation === 'remove') {
+        void removeSkillFromProfile(skillName);
+      } else {
+        void addSkillsToProfile([
+          { name: skillName, level: level || 'متقدم' },
+        ]);
+      }
+      setDynamicIslandMessage(msg);
+      setDynamicIslandPhase('result');
+      addNotification({
+        title:
+          language === 'ar'
+            ? operation === 'remove'
+              ? `إزالة مهارة: ${skillName}`
+              : `إضافة مهارة: ${skillName}`
+            : operation === 'remove'
+            ? `Removed Skill: ${skillName}`
+            : `Added Skill: ${skillName}`,
+        message: msg,
+        type: 'success',
+        targetView: 'profile',
+      });
+      if (shouldNavigate) {
+        handleSelectViewWithPush('profile');
+      }
+      return;
+    }
+
+    // 5. Inspect Project Details
+    if (intent.actionType === 'inspect_project') {
+      const kw = (intent.inspectTarget?.titleKeyword || '').toLowerCase();
+      const targetProj =
+        projects.find(
+          (p) =>
+            p.id === intent.inspectTarget?.projectId ||
+            (kw && p.title.toLowerCase().includes(kw))
+        ) || projects[0];
+      if (targetProj) {
+        setSelectedProjectForAction(targetProj);
+      }
+      setDynamicIslandMessage(msg);
+      setDynamicIslandPhase('result');
+      if (shouldNavigate) {
+        handleSelectViewWithPush(intent.targetView || 'project-analyzer');
+      }
+      return;
+    }
+
+    // 6. Update Saved Project Kanban Status
+    if (
+      intent.actionType === 'update_project_status' &&
+      intent.projectStatusUpdate
+    ) {
+      const kw = (
+        intent.projectStatusUpdate.projectTitleKeyword || ''
+      ).toLowerCase();
+      const targetProj =
+        projects.find(
+          (p) =>
+            p.id === intent.projectStatusUpdate?.projectId ||
+            (kw && p.title.toLowerCase().includes(kw))
+        ) || projects[0];
+
+      if (targetProj) {
+        void updateProjectStatus(
+          targetProj.id,
+          intent.projectStatusUpdate.newStatus
+        );
+        setSelectedProjectForAction({
+          ...targetProj,
+          status: intent.projectStatusUpdate.newStatus,
+        });
+      }
+      setDynamicIslandMessage(msg);
+      setDynamicIslandPhase('result');
+      addNotification({
+        title:
+          language === 'ar'
+            ? 'تحديث حالة المشروع في لوحة كانبان'
+            : 'Project Status Updated',
+        message: msg,
+        type: 'success',
+        targetView: 'saved-projects',
+      });
+      if (shouldNavigate) {
+        handleSelectViewWithPush('saved-projects');
+      }
+      return;
+    }
+
+    // 7. Destructive Delete Project with Mandatory Confirmation Gate
+    if (intent.actionType === 'delete_project') {
+      if (!intent.confirmed) {
+        // Hold deletion until user explicitly confirms
+        setDynamicIslandMessage(msg);
+        setDynamicIslandPhase('result');
+        return;
+      }
+
+      const kw = (
+        intent.projectDeleteTarget?.projectTitleKeyword || ''
+      ).toLowerCase();
+      const targetProj =
+        projects.find(
+          (p) =>
+            p.id === intent.projectDeleteTarget?.projectId ||
+            (kw && p.title.toLowerCase().includes(kw))
+        ) || projects[0];
+
+      const confirmMsg =
+        language === 'ar'
+          ? targetProj
+            ? `تم تأكيد الحذف: أُزيل المشروع "${targetProj.title}" نهائياً من قاعدة مشاريعك.`
+            : 'لم يُعثر على مشروع مطابق لحذفه.'
+          : targetProj
+          ? `Deleted project "${targetProj.title}" from your workspace.`
+          : 'No matching project found to delete.';
+
+      if (targetProj) {
+        void deleteProject(targetProj.id);
+      }
+      setDynamicIslandMessage(confirmMsg);
+      setDynamicIslandPhase('result');
+      addNotification({
+        title:
+          language === 'ar'
+            ? 'تم تنفيذ الحذف المؤكد'
+            : 'Confirmed Deletion Completed',
+        message: confirmMsg,
+        type: 'warning',
+        targetView: 'saved-projects',
+      });
+      if (shouldNavigate) {
+        handleSelectViewWithPush('saved-projects');
+      }
       return;
     }
 
@@ -154,7 +348,24 @@ function FireworkAIWorkspace() {
 
     if (intent.actionType === 'clear_notifications') {
       void markAllNotificationsRead();
-      handleSelectViewWithPush('notifications');
+      if (shouldNavigate) {
+        handleSelectViewWithPush('notifications');
+      }
+      setDynamicIslandMessage(msg);
+      setDynamicIslandPhase('result');
+      return;
+    }
+
+    if (intent.actionType === 'check_notifications') {
+      setDynamicIslandMessage(msg);
+      setDynamicIslandPhase('result');
+      if (shouldNavigate) {
+        handleSelectViewWithPush('notifications');
+      }
+      return;
+    }
+
+    if (intent.actionType === 'workspace_summary') {
       setDynamicIslandMessage(msg);
       setDynamicIslandPhase('result');
       return;
@@ -171,48 +382,64 @@ function FireworkAIWorkspace() {
         date: new Date().toISOString().slice(0, 10),
         status: 'received',
       });
-      handleSelectViewWithPush('financials');
+      if (shouldNavigate) {
+        handleSelectViewWithPush('financials');
+      }
       setDynamicIslandMessage(msg);
       setDynamicIslandPhase('result');
       return;
     }
 
     if (
-      intent.actionType === 'scout_opportunities' &&
-      intent.generatedOpportunities.length > 0
+      intent.actionType === 'scout_opportunities' ||
+      intent.actionType === 'smart_job_discovery'
     ) {
-      const mappedOpps: OpportunityItem[] = intent.generatedOpportunities.map(
-        (opp) => ({
-          id: opp.id,
-          title: opp.title,
-          platform: (opp.platform === 'Upwork' ||
-          opp.platform === 'Fiverr Pro' ||
-          opp.platform === 'Freelancer.com'
-            ? opp.platform
-            : 'مشروع مباشر') as OpportunityItem['platform'],
-          budget: opp.budget,
-          matchScore: opp.matchScore,
-          skills: opp.requiredSkills,
-          postedAt: opp.postedAgo,
-          clientRating: opp.clientRating,
-          description: opp.description,
-          saved: false,
-        })
-      );
-      setOpportunities((prev) => [...mappedOpps, ...prev]);
-      const top = mappedOpps[0];
-      setSelectedProjectForAction({
-        id: top.id,
-        ownerId: userProfile.uid,
-        title: top.title,
-        description: top.description,
-        platform: top.platform,
-        budget: top.budget,
-        deadline: intent.generatedProjectBrief.deadline || '14 يوماً',
-        matchScore: top.matchScore,
-        status: 'new',
-        createdAt: new Date().toISOString().slice(0, 10),
-      });
+      if (intent.generatedOpportunities.length > 0) {
+        const mappedOpps: OpportunityItem[] = intent.generatedOpportunities.map(
+          (opp) => ({
+            id: opp.id,
+            title: opp.title,
+            platform: (opp.platform === 'Upwork' ||
+            opp.platform === 'Fiverr Pro' ||
+            opp.platform === 'Freelancer.com' ||
+            opp.platform === 'Mostaql' ||
+            opp.platform === 'Khamsat'
+              ? opp.platform
+              : 'مشروع مباشر') as OpportunityItem['platform'],
+            budget: opp.budget,
+            budgetMinUsd: opp.budgetMinUsd,
+            budgetMaxUsd: opp.budgetMaxUsd,
+            category: opp.category,
+            experienceLevel: opp.experienceLevel,
+            matchScore: opp.matchScore,
+            matchReasons: opp.matchReasons,
+            skills: opp.requiredSkills,
+            postedAt: opp.postedAgo,
+            postedHoursAgo: opp.postedHoursAgo,
+            clientRating: opp.clientRating,
+            description: opp.description,
+            saved: false,
+          })
+        );
+        setOpportunities((prev) => {
+          const matchedIds = new Set(mappedOpps.map((m) => m.id));
+          const remaining = prev.filter((item) => !matchedIds.has(item.id));
+          return [...mappedOpps, ...remaining];
+        });
+        const top = mappedOpps[0];
+        setSelectedProjectForAction({
+          id: top.id,
+          ownerId: userProfile.uid,
+          title: top.title,
+          description: top.description,
+          platform: top.platform,
+          budget: top.budget,
+          deadline: intent.generatedProjectBrief.deadline || '14 يوماً',
+          matchScore: top.matchScore,
+          status: 'new',
+          createdAt: new Date().toISOString().slice(0, 10),
+        });
+      }
     } else if (intent.actionType === 'save_project') {
       void saveProject({
         title: intent.generatedProjectBrief.title || rawQuery || 'مشروع جديد',
@@ -339,14 +566,16 @@ function FireworkAIWorkspace() {
     addNotification({
       title:
         language === 'ar'
-          ? 'Lens Voice · تم تنفيذ الأمر داخل التطبيق'
-          : 'Lens Voice · Command Executed in Workspace',
+          ? 'Firework AI · تم تنفيذ الأمر داخل التطبيق'
+          : 'Firework AI · Command Executed in Workspace',
       message: msg,
       type: 'success',
       targetView: intent.targetView,
     });
 
-    handleSelectViewWithPush(intent.targetView);
+    if (shouldNavigate) {
+      handleSelectViewWithPush(intent.targetView);
+    }
   };
 
   // Lock background scrolling when any modal or mobile drawer is open
@@ -410,7 +639,12 @@ function FireworkAIWorkspace() {
       case 'proposal-studio':
         return <ProposalStudioView onSelectView={handleSelectViewWithPush} />;
       case 'lens-chat':
-        return <LensAIChatView onSelectView={handleSelectViewWithPush} />;
+        return (
+          <LensAIChatView
+            onSelectView={handleSelectViewWithPush}
+            onExecuteTaskIntent={handleExecuteVoiceTaskIntent}
+          />
+        );
       case 'saved-projects':
         return <SavedProjectsView onSelectView={handleSelectViewWithPush} />;
       case 'opportunities':

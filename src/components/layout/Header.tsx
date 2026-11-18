@@ -147,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
     updateUISettings,
     resetUISettings,
   } = useLanguage();
-  const { notifications, userProfile, projects } = useData();
+  const { notifications, userProfile, projects, setWorkStatus } = useData();
   const { setIsAccountModalOpen } = useAuth();
 
   const [isControlCenterOpen, setIsControlCenterOpen] = useState<boolean>(false);
@@ -392,8 +392,8 @@ export const Header: React.FC<HeaderProps> = ({
           aria-label="Unified Workspace Toolbar"
           className="relative px-2.5 sm:px-4 py-1.5 flex items-center justify-between gap-2"
         >
-          {/* Left/Start: Mobile Drawer Button + Current View Pill + Segmented Contextual Tabs */}
-          <div className="flex items-center gap-2 min-w-0">
+          {/* Start: Mobile Drawer Button + Current View Pill (never overlaps right controls) */}
+          <div className="flex items-center gap-2 min-w-0 shrink">
             <button
               type="button"
               onClick={onToggleMobileMenu}
@@ -403,56 +403,33 @@ export const Header: React.FC<HeaderProps> = ({
               <Menu className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center gap-2 min-w-0 px-2 py-1 rounded-full">
+            <div className="flex items-center gap-2 min-w-0 px-1.5 py-1 rounded-full">
               <button
                 type="button"
                 onClick={() => onSelectView('overview')}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#007AFF] dark:text-[#60A5FA] hover:underline whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#007AFF] dark:text-[#60A5FA] hover:underline whitespace-nowrap shrink-0"
               >
                 <AppLogoIcon size="xs" />
                 <span className="hidden sm:inline">Firework AI</span>
               </button>
-              <span className="text-[#5B6474] dark:text-[#94A3B8] hidden sm:inline">·</span>
-              <h1 className="font-display font-bold text-xs sm:text-sm text-[#111827] dark:text-white truncate">
+              <span className="text-[#5B6474] dark:text-[#94A3B8] hidden md:inline shrink-0">·</span>
+              <h1 className="font-display font-bold text-xs sm:text-sm text-[#111827] dark:text-white truncate max-w-[140px] md:max-w-[190px]">
                 {currentTitle}
               </h1>
             </div>
-
-            {/* Segmented Liquid Glass Capsule Sub-Tabs on Desktop */}
-            {activeTabGroup && (
-              <div className="hidden xl:flex items-center gap-1 p-1 rounded-full bg-black/[0.04] dark:bg-white/[0.06] border border-white/60 dark:border-white/10">
-                {activeTabGroup.tabs.map((tab) => {
-                  const isSelected = activeView === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => onSelectView(tab.id)}
-                      className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap ${
-                        isSelected
-                          ? 'apple-capsule-active text-[#007AFF] dark:text-[#60A5FA]'
-                          : 'text-[#5B6474] dark:text-[#94A3B8] hover:text-[#111827] dark:hover:text-white'
-                      }`}
-                    >
-                      {language === 'ar' ? tab.ar : tab.en}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
-          {/* Center/Right: NSToolbar Control Groups separated by role="separator" */}
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+          {/* End: NSToolbar Control Groups separated by role="separator" — fits cleanly on 1440px without clipping */}
+          <div className="flex items-center gap-1.5 shrink-0 py-0.5">
             {/* Group 1: Search & AI Assistants */}
             <button
               type="button"
               onClick={onOpenCommandPalette}
               aria-label="البحث السريع"
-              className="spring-btn inline-flex items-center gap-2 px-3 py-1.5 rounded-full apple-capsule-active text-xs text-[#374151] dark:text-[#CBD5E1] hover:text-[#111827] dark:hover:text-white whitespace-nowrap shrink-0"
+              className="spring-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full apple-capsule-active text-xs text-[#374151] dark:text-[#CBD5E1] hover:text-[#111827] dark:hover:text-white whitespace-nowrap shrink-0"
             >
               <Search className="w-3.5 h-3.5 text-[#007AFF] dark:text-[#60A5FA]" />
-              <span className="hidden md:inline font-medium">
+              <span className="hidden 2xl:inline font-medium">
                 {language === 'ar' ? 'بحث في مساحة العمل...' : 'Search workspace...'}
               </span>
               <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded-full bg-black/[0.05] dark:bg-white/[0.1] font-mono text-[10px] text-[#5B6474] dark:text-[#94A3B8]">
@@ -536,7 +513,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">
+              <span className="hidden 2xl:inline">
                 {language === 'ar' ? 'الزجاج والتحكم' : 'Glass Control'}
               </span>
             </button>
@@ -544,7 +521,38 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Structural Separator between System group and Account/Notifications group */}
             <div role="separator" aria-orientation="vertical" className="hidden sm:block mx-0.5" />
 
-            {/* Group 3: Notifications & User Account */}
+            {/* Group 3: Work/Sleep Live Mode, Notifications & User Account */}
+            <button
+              type="button"
+              data-testid="header-work-status-pill"
+              onClick={() =>
+                void setWorkStatus(
+                  userProfile.workStatus === 'sleep' ? 'work' : 'sleep'
+                )
+              }
+              aria-label={
+                userProfile.workStatus === 'sleep'
+                  ? 'وضع الهدوء Sleep — انقر للتبديل إلى Work'
+                  : 'وضع العمل Work — انقر للتبديل إلى Sleep'
+              }
+              className={`spring-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shrink-0 border transition-colors ${
+                userProfile.workStatus === 'sleep'
+                  ? 'bg-indigo-500/20 border-indigo-400/40 text-indigo-700 dark:text-indigo-300'
+                  : 'bg-emerald-500/15 border-emerald-400/40 text-emerald-700 dark:text-emerald-300'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  userProfile.workStatus === 'sleep'
+                    ? 'bg-indigo-400'
+                    : 'bg-emerald-400 animate-pulse'
+                }`}
+              />
+              <span>
+                {userProfile.workStatus === 'sleep' ? 'Sleep' : 'Work'}
+              </span>
+            </button>
+
             <button
               type="button"
               onClick={() => onSelectView('notifications')}
@@ -563,10 +571,10 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={() => setIsAccountModalOpen(true)}
               aria-label="إعدادات الحساب"
-              className="spring-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full apple-circle-glass text-xs font-semibold text-[#111827] dark:text-white whitespace-nowrap shrink-0"
+              className="spring-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full apple-circle-glass text-xs font-semibold text-[#111827] dark:text-white whitespace-nowrap shrink-0"
             >
               <UserCheck className="w-3.5 h-3.5 text-[#007AFF] dark:text-[#60A5FA]" />
-              <span className="max-w-[88px] truncate hidden sm:inline">
+              <span className="max-w-[78px] truncate hidden md:inline">
                 {userProfile.name || (language === 'ar' ? 'حسابي' : 'Account')}
               </span>
             </button>
@@ -853,9 +861,9 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Desktop Contextual Sub-Tabs on Medium screens when inside a multi-view group */}
+      {/* Desktop Contextual Sub-Tabs when inside a multi-view group */}
       {activeTabGroup && (
-        <div className="hidden lg:flex xl:hidden mt-2 rounded-full apple-capsule-bar p-1 items-center gap-1 overflow-x-auto no-scrollbar">
+        <div className="hidden lg:flex mt-2 rounded-full apple-capsule-bar p-1 items-center gap-1 overflow-x-auto no-scrollbar w-fit">
           {activeTabGroup.tabs.map((tab) => {
             const isSelected = activeView === tab.id;
             return (

@@ -15,9 +15,12 @@ import {
   X,
   ArrowUpLeft,
   CheckCircle2,
+  ShieldAlert,
+  Check,
 } from 'lucide-react';
 import { ViewId } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useData } from '../../context/DataContext';
 import { SiriOrbIcon, SiriOrbStatus } from '../voice/SiriOrbIcon';
 import {
   resolveVoiceAgentTaskIntent,
@@ -53,6 +56,14 @@ export const DynamicIslandBar: React.FC<DynamicIslandBarProps> = ({
   externalMessage,
 }) => {
   const { language } = useLanguage();
+  const {
+    userProfile,
+    projects,
+    opportunities,
+    proposals,
+    financials,
+    notifications,
+  } = useData();
   const [phase, setPhase] = useState<DynamicIslandPhase>('compact');
   const [query, setQuery] = useState<string>('');
   const [activeCategory, setActiveCategory] = useState<
@@ -62,6 +73,10 @@ export const DynamicIslandBar: React.FC<DynamicIslandBarProps> = ({
   const [resultSummary, setResultSummary] = useState<string>('');
   const [lastExecutedTarget, setLastExecutedTarget] =
     useState<ViewId>('opportunities');
+  const [lastIntent, setLastIntent] = useState<VoiceTaskIntentResult | null>(
+    null
+  );
+  const [rawCommandText, setRawCommandText] = useState<string>('');
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -130,40 +145,98 @@ export const DynamicIslandBar: React.FC<DynamicIslandBarProps> = ({
   );
 
   const runDynamicIslandCommand = useCallback(
-    (commandText: string) => {
+    async (commandText: string) => {
       const clean = commandText.trim();
       if (!clean) return;
       clearTimers();
+      setRawCommandText(clean);
 
-      const intent = resolveVoiceAgentTaskIntent(clean);
-      setLastExecutedTarget(intent.targetView);
-
-      // Morph sequence matching attached Video 1 (Thinking... -> Searching... -> Planning...) & Video 4
+      // Morph sequence matching attached Video 1 (Thinking... -> Searching... -> Planning...)
       setPhase('Thinking...');
       const t1 = setTimeout(() => {
-        setPhase('Searching...');
-      }, 650);
-
+        setPhase((prev) => (prev === 'Thinking...' ? 'Searching...' : prev));
+      }, 480);
       const t2 = setTimeout(() => {
-        setPhase('Planning...');
-      }, 1350);
+        setPhase((prev) => (prev === 'Searching...' ? 'Planning...' : prev));
+      }, 960);
 
-      const t3 = setTimeout(() => {
-        onExecuteTaskIntent(intent, clean);
-        const summary =
-          language === 'ar' ? intent.spokenSummaryAr : intent.spokenSummaryEn;
-        setResultSummary(summary);
-        setPhase('result');
-        speakConfirmation(summary);
-      }, 2050);
+      let intent: VoiceTaskIntentResult;
+      try {
+        const res = await fetch('/api/gemini/agent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: clean,
+            channel: 'island',
+            language,
+            userProfile,
+            projects,
+            opportunities,
+            proposals,
+            financials,
+            notifications,
+            workStatus: userProfile.workStatus || 'work',
+          }),
+        });
+        if (!res.ok) throw new Error('Agent endpoint failed');
+        const data = await res.json();
+        intent =
+          data.taskIntent ||
+          resolveVoiceAgentTaskIntent(clean, {
+            userProfile,
+            projects,
+            opportunities,
+            proposals,
+            financials,
+            notifications,
+            workStatus: userProfile.workStatus || 'work',
+            channel: 'island',
+            language,
+          });
+      } catch {
+        intent = resolveVoiceAgentTaskIntent(clean, {
+          userProfile,
+          projects,
+          opportunities,
+          proposals,
+          financials,
+          notifications,
+          workStatus: userProfile.workStatus || 'work',
+          channel: 'island',
+          language,
+        });
+      }
 
-      const t4 = setTimeout(() => {
-        setPhase('compact');
-      }, 8200);
+      clearTimers();
+      setLastIntent(intent);
+      setLastExecutedTarget(intent.targetView);
 
-      phaseTimersRef.current = [t1, t2, t3, t4];
+      onExecuteTaskIntent(intent, clean);
+      const summary =
+        language === 'ar' ? intent.spokenSummaryAr : intent.spokenSummaryEn;
+      setResultSummary(summary);
+      setPhase('result');
+      speakConfirmation(summary);
+
+      if (!intent.requiresConfirmation) {
+        const t4 = setTimeout(() => {
+          setPhase('compact');
+        }, 9000);
+        phaseTimersRef.current = [t4];
+      }
     },
-    [clearTimers, language, onExecuteTaskIntent, speakConfirmation]
+    [
+      clearTimers,
+      financials,
+      language,
+      notifications,
+      onExecuteTaskIntent,
+      opportunities,
+      projects,
+      proposals,
+      speakConfirmation,
+      userProfile,
+    ]
   );
 
   const startIslandVoiceListening = () => {
@@ -535,11 +608,19 @@ export const DynamicIslandBar: React.FC<DynamicIslandBarProps> = ({
                 <SiriOrbIcon size="md" status="speaking" audioLevel={0.6} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#FDE68A]">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
+                    {lastIntent?.requiresConfirmation && !lastIntent.confirmed ? (
+                      <ShieldAlert className="w-3.5 h-3.5 text-[#FF3B30] shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
+                    )}
                     <span>
                       {resultSummary === 'لا أعرف.' || resultSummary === "I don't know."
                         ? 'Lens Voice'
-                        : 'Lens Voice · تم تنفيذ الأمر داخل التطبيق'}
+                        : lastIntent?.requiresConfirmation && !lastIntent.confirmed
+                        ? language === 'ar'
+                          ? 'يتطلب تأكيدك قبل التنفيذ'
+                          : 'Confirmation Required'
+                        : 'Firework AI · تم تنفيذ الأمر والتحقق'}
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm font-medium text-white leading-snug line-clamp-2 mt-0.5">
@@ -549,18 +630,61 @@ export const DynamicIslandBar: React.FC<DynamicIslandBarProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
-                {resultSummary !== 'لا أعرف.' && resultSummary !== "I don't know." && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSelectView(lastExecutedTarget);
-                      setPhase('compact');
-                    }}
-                    className="px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 border border-white/25 text-[11px] font-bold text-white flex items-center gap-1"
-                  >
-                    <span>{language === 'ar' ? 'عرض النتائج' : 'Open'}</span>
-                    <ArrowUpLeft className="w-3.5 h-3.5" />
-                  </button>
+                {lastIntent?.requiresConfirmation && !lastIntent.confirmed ? (
+                  <>
+                    <button
+                      type="button"
+                      data-testid="island-confirm-destructive"
+                      onClick={() => {
+                        const confirmedIntent: VoiceTaskIntentResult = {
+                          ...lastIntent,
+                          confirmed: true,
+                          executionTrace: [
+                            ...(lastIntent.executionTrace || []),
+                            'USER_CONFIRMED',
+                            'EXECUTE',
+                            'VERIFY',
+                          ],
+                        };
+                        setLastIntent(confirmedIntent);
+                        onExecuteTaskIntent(confirmedIntent, rawCommandText);
+                        setResultSummary(
+                          language === 'ar'
+                            ? 'تم تأكيد الحذف وتنفيذه بنجاح.'
+                            : 'Deletion confirmed and executed.'
+                        );
+                      }}
+                      className="px-3 py-1.5 rounded-full bg-[#FF3B30] hover:bg-[#DC2626] text-[11px] font-bold text-white flex items-center gap-1"
+                    >
+                      <Check className="w-3 h-3" />
+                      <span>{language === 'ar' ? 'تأكيد الحذف' : 'Confirm'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLastIntent(null);
+                        setPhase('compact');
+                      }}
+                      className="px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-white"
+                    >
+                      {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                    </button>
+                  </>
+                ) : (
+                  resultSummary !== 'لا أعرف.' &&
+                  resultSummary !== "I don't know." && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectView(lastExecutedTarget);
+                        setPhase('compact');
+                      }}
+                      className="px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 border border-white/25 text-[11px] font-bold text-white flex items-center gap-1"
+                    >
+                      <span>{language === 'ar' ? 'عرض النتائج' : 'Open'}</span>
+                      <ArrowUpLeft className="w-3.5 h-3.5" />
+                    </button>
+                  )
                 )}
                 <button
                   type="button"

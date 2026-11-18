@@ -14,7 +14,10 @@ import { MatchRing } from '../components/common/MatchRing';
 import { useData } from '../context/DataContext';
 import { OpportunityItem, ViewId } from '../types';
 import { SiriOrbIcon } from '../components/voice/SiriOrbIcon';
-import { resolveVoiceAgentTaskIntent } from '../utils/calculations';
+import {
+  resolveVoiceAgentTaskIntent,
+  discoverSmartOpportunities,
+} from '../utils/calculations';
 
 interface OpportunitiesViewProps {
   onSelectView: (view: ViewId) => void;
@@ -100,45 +103,47 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
   };
 
   const handleScoutWithLensAI = () => {
-    const userSkills =
-      userProfile.skills.length > 0
-        ? userProfile.skills.map((s) => s.name)
-        : ['React', 'TypeScript', 'Node.js', 'AI Integration'];
-    const baseRate = userProfile.hourlyRate || 50;
-
-    const tailored: OpportunityItem[] = [
-      {
-        id: `opp-lens-${Date.now()}-1`,
-        title: `تطوير نظام أتمتة ذكي ولوحة قيادة تحليلية (${userProfile.title || 'Full-Stack'})`,
-        platform: 'Upwork',
-        budget: `$${(baseRate * 45).toLocaleString('en-US')} - $${(baseRate * 65).toLocaleString('en-US')}`,
-        matchScore: 95,
-        skills: userSkills.slice(0, 4),
-        postedAt: 'منذ 15 دقيقة',
-        clientRating: 4.95,
-        description: `فرصة عمل مطابقة لتخصصك (${userProfile.title || 'مستشار تقني'}) تتطلب بناء منصة ويب عالية الأداء وربط واجهات برمجية متقدمة مع تسليم مرحلي خلال 3 أسابيع.`,
-        saved: false,
-      },
-      {
-        id: `opp-lens-${Date.now()}-2`,
-        title: 'هندسة وتطوير بوابة عملاء تفاعلية مع ربط قواعد بيانات سحابية',
-        platform: 'Fiverr Pro',
-        budget: `$${(baseRate * 35).toLocaleString('en-US')}`,
-        matchScore: 89,
-        skills: userSkills.slice(0, 3),
-        postedAt: 'منذ ساعة',
-        clientRating: 4.88,
-        description:
-          'مطلوب مستقل محترف لإعادة هيكلة واجهة الاستخدام وتأمين قواعد البيانات السحابية مع توثيق فني واضح.',
-        saved: false,
-      },
-    ];
-    setOpportunities((prev) => [...tailored, ...prev]);
+    const discovery = discoverSmartOpportunities(
+      'أفضل الأعمال المناسبة لمهاراتي',
+      userProfile,
+      opportunities
+    );
+    const matched: OpportunityItem[] = discovery.voiceOpportunities.map((item) => ({
+      id: item.id,
+      title: item.title,
+      platform: (item.platform === 'Upwork' ||
+      item.platform === 'Fiverr Pro' ||
+      item.platform === 'Freelancer.com' ||
+      item.platform === 'Mostaql' ||
+      item.platform === 'Khamsat'
+        ? item.platform
+        : 'مشروع مباشر') as OpportunityItem['platform'],
+      budget: item.budget,
+      budgetMinUsd: item.budgetMinUsd,
+      budgetMaxUsd: item.budgetMaxUsd,
+      category: item.category,
+      experienceLevel: item.experienceLevel,
+      matchScore: item.matchScore,
+      matchReasons: item.matchReasons,
+      skills: item.requiredSkills,
+      postedAt: item.postedAgo,
+      postedHoursAgo: item.postedHoursAgo,
+      clientRating: item.clientRating,
+      description: item.description,
+      saved: false,
+    }));
+    if (matched.length > 0) {
+      setOpportunities((prev) => {
+        const ids = new Set(matched.map((m) => m.id));
+        return [...matched, ...prev.filter((p) => !ids.has(p.id))];
+      });
+    }
   };
 
   const handleScoutWritingAndTranslation = () => {
     const intent = resolveVoiceAgentTaskIntent(
-      'ابحث لي عن عمل مناسب مثلاً لكتابة أو نسخ أو ترجمة محتوى'
+      'ابحث لي عن عمل مناسب مثلاً لكتابة أو نسخ أو ترجمة محتوى',
+      { userProfile, opportunities }
     );
     const mapped: OpportunityItem[] = intent.generatedOpportunities.map(
       (item) => ({
@@ -146,19 +151,32 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
         title: item.title,
         platform: (item.platform === 'Upwork' ||
         item.platform === 'Fiverr Pro' ||
-        item.platform === 'Freelancer.com'
+        item.platform === 'Freelancer.com' ||
+        item.platform === 'Mostaql' ||
+        item.platform === 'Khamsat'
           ? item.platform
           : 'مشروع مباشر') as OpportunityItem['platform'],
         budget: item.budget,
+        budgetMinUsd: item.budgetMinUsd,
+        budgetMaxUsd: item.budgetMaxUsd,
+        category: item.category,
+        experienceLevel: item.experienceLevel,
         matchScore: item.matchScore,
+        matchReasons: item.matchReasons,
         skills: item.requiredSkills,
         postedAt: item.postedAgo,
+        postedHoursAgo: item.postedHoursAgo,
         clientRating: item.clientRating,
         description: item.description,
         saved: false,
       })
     );
-    setOpportunities((prev) => [...mapped, ...prev]);
+    if (mapped.length > 0) {
+      setOpportunities((prev) => {
+        const ids = new Set(mapped.map((m) => m.id));
+        return [...mapped, ...prev.filter((p) => !ids.has(p.id))];
+      });
+    }
   };
 
   return (
@@ -396,6 +414,21 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
                   <p className="text-xs text-[#a4c2b4] leading-relaxed">
                     {opp.description}
                   </p>
+                  {opp.matchReasons && opp.matchReasons.length > 0 && (
+                    <div
+                      data-testid="opportunity-match-reasons"
+                      className="flex flex-wrap gap-1.5 pt-1"
+                    >
+                      {opp.matchReasons.map((reason, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/35 text-[10px] font-semibold text-emerald-800 dark:text-emerald-300"
+                        >
+                          ✓ {reason}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <MatchRing score={opp.matchScore} size={62} label="التوافق" />

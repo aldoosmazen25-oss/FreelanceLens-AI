@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="squircleBg" x1="256" y1="16" x2="256" y2="496" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#191923" />
+      <stop offset="45%" stop-color="#0D0D14" />
+      <stop offset="100%" stop-color="#050508" />
+    </linearGradient>
+    <linearGradient id="squircleBorder" x1="256" y1="16" x2="256" y2="496" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5A5B72" stop-opacity="0.7" />
+      <stop offset="30%" stop-color="#2A2B38" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#12121A" stop-opacity="0.5" />
+    </linearGradient>
+    <linearGradient id="screenFill" x1="150" y1="190" x2="310" y2="330" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6E7085" />
+      <stop offset="38%" stop-color="#353646" />
+      <stop offset="100%" stop-color="#181822" />
+    </linearGradient>
+    <linearGradient id="deckBase" x1="120" y1="312" x2="412" y2="338" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#A6A8BA" />
+      <stop offset="55%" stop-color="#E4E6F2" />
+      <stop offset="100%" stop-color="#8C8FA6" />
+    </linearGradient>
+    <linearGradient id="orbitRibbon" x1="76" y1="345" x2="442" y2="175" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D8DCEB" />
+      <stop offset="50%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#CFD4E6" />
+    </linearGradient>
+    <linearGradient id="briefcaseGrad" x1="230" y1="220" x2="230" y2="288" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#C8CCE0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Outer Dark Squircle Body -->
+  <rect x="20" y="20" width="472" height="472" rx="112" fill="url(#squircleBg)" stroke="url(#squircleBorder)" stroke-width="5" />
+
+  <!-- Subtle Back Orbital Arc -->
+  <path
+    d="M275 184 C 345 154, 412 152, 434 176"
+    stroke="#E2E6F5"
+    stroke-width="3.5"
+    stroke-linecap="round"
+    opacity="0.85"
+  />
+  <path
+    d="M126 254 C 95 278, 76 306, 84 328"
+    stroke="#CFD4E8"
+    stroke-width="3"
+    stroke-linecap="round"
+    opacity="0.7"
+  />
+
+  <!-- Laptop Screen Lid (3D Perspective Tilted Trapezoid) -->
+  <path
+    d="M161 196 C163 190 169 186 176 186 H321 C329 186 334 192 331 200 L294 314 H122 L161 196 Z"
+    fill="url(#screenFill)"
+    stroke="#F1F3FA"
+    stroke-width="5.5"
+    stroke-linejoin="round"
+  />
+
+  <!-- Briefcase Icon Centered on Laptop Screen -->
+  <g transform="translate(0, 2)">
+    <!-- Handle -->
+    <path
+      d="M219 233 V225 C219 221 223 218 228 218 H244 C249 218 253 221 253 225 V233"
+      stroke="#F5F7FF"
+      stroke-width="5.5"
+      stroke-linecap="round"
+    />
+    <!-- Top Flap -->
+    <path
+      d="M201 233 H267 C271 233 273 236 272 240 L266 254 C264 258 259 260 254 260 H205 C200 260 197 258 197 254 L198 238 C198 235 199 233 201 233 Z"
+      fill="url(#briefcaseGrad)"
+    />
+    <!-- Bottom Body -->
+    <path
+      d="M196 258 H263 L256 279 C254 283 250 285 245 285 H199 C194 285 191 282 192 277 L196 258 Z"
+      fill="url(#briefcaseGrad)"
+      opacity="0.92"
+    />
+    <!-- Center Clasp Cutout -->
+    <rect x="224" y="251" width="13" height="11" rx="2.5" fill="#2A2B3A" />
+  </g>
+
+  <!-- Laptop Base Deck (Extending Right in Perspective) -->
+  <path
+    d="M120 314 H406 C411 314 413 320 408 323 L358 336 C348 339 336 340 324 340 H126 C121 340 119 336 120 331 V314 Z"
+    fill="url(#deckBase)"
+  />
+  <!-- Keyboard Recession Shadow -->
+  <path
+    d="M286 314 H378 L345 324 H272 L286 314 Z"
+    fill="#191A24"
+  />
+
+  <!-- Sweeping Foreground 3D Silver Orbital Swoosh -->
+  <path
+    d="M84 300 C 62 346, 128 362, 238 322 C 344 283, 444 214, 439 177 C 436 162, 412 158, 378 164 C 414 164, 424 176, 414 196 C 398 228, 314 278, 224 310 C 142 339, 88 332, 84 300 Z"
+    fill="url(#orbitRibbon)"
+  />
+
+  <!-- 4-Pointed Star Sparkle at Upper Right of Orbit -->
+  <path
+    d="M380 104 C 383 136, 389 142, 421 145 C 389 148, 383 154, 380 186 C 377 154, 371 148, 339 145 C 371 142, 377 136, 380 104 Z"
+    fill="#FFFFFF"
+  />
+</svg>

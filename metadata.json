@@ -1,0 +1,6 @@
+{
+  "name": "Firework AI",
+  "description": "منصة استخبارات وتحليل مشاريع العمل الحر للمستقلين وأصحاب الوكالات — تحليل متطلبات العملاء، كشف مخاطر العقود، صياغة العروض التنافسية، والمحادثة الصوتية الحية.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

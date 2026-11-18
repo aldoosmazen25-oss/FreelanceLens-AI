@@ -1,0 +1,134 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'name']) &&
+             data.uid is string && data.uid == userId && data.uid.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 120;
+    }
+
+    function isValidSavedProject(data, userId, projectId) {
+      return data.keys().hasAll(['id', 'ownerId', 'title', 'status']) &&
+             data.id is string && data.id == projectId && data.id.size() <= 128 &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 240 &&
+             data.status is string && data.status in ['new', 'analyzed', 'proposed', 'waiting', 'in_progress', 'completed'];
+    }
+
+    function isValidProposalRecord(data, userId, proposalId) {
+      return data.keys().hasAll(['id', 'ownerId', 'projectTitle', 'fullText', 'status']) &&
+             data.id is string && data.id == proposalId && data.id.size() <= 128 &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId.size() <= 128 &&
+             data.projectTitle is string && data.projectTitle.size() >= 1 && data.projectTitle.size() <= 240 &&
+             data.fullText is string && data.fullText.size() >= 1 && data.fullText.size() <= 10000 &&
+             data.status is string && data.status in ['draft', 'sent', 'replied', 'won', 'lost'];
+    }
+
+    function isValidFinancialTransaction(data, userId, txId) {
+      return data.keys().hasAll(['id', 'ownerId', 'title', 'type', 'amount', 'status']) &&
+             data.id is string && data.id == txId && data.id.size() <= 128 &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.type is string && data.type in ['revenue', 'expense'] &&
+             data.amount is number && data.amount >= 0 &&
+             data.status is string && data.status in ['received', 'pending'];
+    }
+
+    function isValidChatSession(data, userId, sessionId) {
+      return data.keys().hasAll(['id', 'ownerId', 'title']) &&
+             data.id is string && data.id == sessionId && data.id.size() <= 128 &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200;
+    }
+
+    function isValidNotificationItem(data, userId, notifId) {
+      return data.keys().hasAll(['id', 'ownerId', 'title', 'type', 'read']) &&
+             data.id is string && data.id == notifId && data.id.size() <= 128 &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.type is string && data.type in ['success', 'warning', 'opportunity', 'info'] &&
+             data.read is bool;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId);
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId) && incoming().uid == existing().uid;
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /projects/{projectId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(projectId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(projectId) && isValidSavedProject(incoming(), userId, projectId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(projectId) && isValidSavedProject(incoming(), userId, projectId) && incoming().ownerId == existing().ownerId && incoming().id == existing().id;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(projectId);
+      }
+
+      match /proposals/{proposalId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(proposalId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(proposalId) && isValidProposalRecord(incoming(), userId, proposalId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(proposalId) && isValidProposalRecord(incoming(), userId, proposalId) && incoming().ownerId == existing().ownerId && incoming().id == existing().id;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(proposalId);
+      }
+
+      match /financials/{transactionId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(transactionId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(transactionId) && isValidFinancialTransaction(incoming(), userId, transactionId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(transactionId) && isValidFinancialTransaction(incoming(), userId, transactionId) && incoming().ownerId == existing().ownerId && incoming().id == existing().id;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(transactionId);
+      }
+
+      match /chatSessions/{sessionId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(sessionId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(sessionId) && isValidChatSession(incoming(), userId, sessionId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(sessionId) && isValidChatSession(incoming(), userId, sessionId) && incoming().ownerId == existing().ownerId && incoming().id == existing().id;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(sessionId);
+      }
+
+      match /voiceSessions/{sessionId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(sessionId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(sessionId) && isValidChatSession(incoming(), userId, sessionId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(sessionId) && isValidChatSession(incoming(), userId, sessionId) && incoming().ownerId == existing().ownerId && incoming().id == existing().id;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(sessionId);
+      }
+
+      match /notifications/{notificationId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(notificationId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(notificationId) && isValidNotificationItem(incoming(), userId, notificationId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(notificationId) && isValidNotificationItem(incoming(), userId, notificationId) && incoming().ownerId == existing().ownerId && incoming().id == existing().id;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(notificationId);
+      }
+    }
+  }
+}

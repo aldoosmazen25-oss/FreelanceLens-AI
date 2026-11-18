@@ -1,0 +1,792 @@
+# Firework AI — Complete Authentication, Onboarding & Professional Profile System
+
+## 1. Project Context and Critical Instructions
+
+You are working on my existing application, **Firework AI**, previously known as FreelanceLens AI.
+
+Do not create a new application, rebuild the entire project, replace the existing architecture, or remove current features.
+
+Your task is to upgrade the existing application by implementing a complete, functional authentication system, a professional onboarding experience, and a persistent user profile that contains the information needed to personalize AI-powered freelance project analysis.
+
+The current problem is that when I open the application, it immediately displays the application dashboard and appears to treat me as an already registered user, even though I have not entered my professional background, specialization, skills, education, certificates, or experience.
+
+This behavior must be corrected.
+
+**The application must distinguish between an unauthenticated visitor, a newly registered user, and a returning authenticated user.**
+
+Before making changes, inspect the existing authentication logic, routing, database configuration, Firebase integration if present, user state, dashboard, and profile components. Reuse the existing infrastructure whenever possible.
+
+Do not assume Firebase Authentication or Firestore is correctly configured just because they were previously enabled. Verify the current implementation.
+
+---
+
+## 2. Required User Journey
+
+Implement the following complete user journey.
+
+### Stage A — Welcome and Authentication
+
+When an unauthenticated user opens the application, display a professional welcome page instead of immediately showing the private dashboard.
+
+The welcome page should provide:
+
+- Firework AI logo and product name.
+- A concise description of the platform.
+- A primary “Create Account” button.
+- A secondary “Sign In” button.
+- A “Continue with Google” option only if Google authentication is properly configured.
+- Links to the privacy policy and terms of use if these pages exist or can be implemented appropriately.
+- A clear language selector if the existing application supports multiple languages.
+
+The page must be simple, elegant, responsive, and consistent with the existing application design.
+
+Do not add unnecessary marketing sections or excessive decorative cards.
+
+### Stage B — Account Registration
+
+Create a functional registration form with the following fields:
+
+**Required account fields:**
+
+1. Full name.
+2. Email address.
+3. Password.
+4. Confirm password.
+5. Acceptance of the terms of use and privacy policy.
+
+Validate all fields before submission.
+
+Email validation must reject invalid email formats. Password validation must follow the authentication provider's actual security requirements. The password and confirmation must match.
+
+Show understandable validation messages in the interface.
+
+Include a password visibility toggle, a loading state during registration, and clear success or failure feedback.
+
+Do not store passwords in plaintext or save them directly in Firestore. Use Firebase Authentication or another authentication system already present in the project.
+
+If an account already exists with the same email, show an appropriate error and provide a route to sign in.
+
+### Stage C — Email Verification and Account Security
+
+If the chosen authentication provider supports email verification, implement the appropriate verification flow.
+
+Provide:
+
+- A verification-pending screen.
+- A resend-verification option where supported.
+- Clear instructions for returning to the application after verification.
+- A sign-out option.
+- A password reset flow using the authentication provider.
+- Proper session handling across page refreshes.
+
+Do not mark an email as verified unless the authentication provider confirms it.
+
+Do not display fake success messages for authentication actions.
+
+### Stage D — First-Time Professional Onboarding
+
+After successful registration and authentication, do not send the user directly to the dashboard.
+
+Instead, open a guided professional onboarding process.
+
+The onboarding process should collect the information needed to personalize Firework AI.
+
+Use a multi-step form with a visible progress indicator, clear field labels, sensible spacing, and the ability to return to previous steps without losing entered information.
+
+Required fields must be clearly marked. Optional fields must be labeled as optional.
+
+Save onboarding progress so the user can resume if they leave before completion, where the existing infrastructure supports this safely.
+
+The application must not mark onboarding as complete until all required fields have passed validation and the profile has been saved successfully.
+
+---
+
+# 3. Professional Onboarding Form
+
+## Step 1 — Personal and Professional Identity
+
+Collect the following information:
+
+- Full name — required.
+- Professional headline or job title — required.
+- Primary professional category — required.
+- Primary specialization — required.
+- Current professional level — required.
+- Country — required.
+- Preferred working language — required.
+- Short professional introduction — required.
+
+Professional headline examples:
+
+- Graphic Designer.
+- Front-End Developer.
+- Back-End Developer.
+- Full-Stack Developer.
+- UI/UX Designer.
+- Data Analyst.
+- Data Entry Specialist.
+- AI Developer.
+- AI Automation Specialist.
+- Digital Marketer.
+- Content Writer.
+- Translator.
+- Video Editor.
+- Motion Graphics Designer.
+- Virtual Assistant.
+- Business Analyst.
+- Accountant.
+- Cybersecurity Specialist.
+- Mobile App Developer.
+- Technical Support Specialist.
+
+Allow users to choose “Other” and specify their profession.
+
+Do not restrict the platform to the examples above. Freelancers work in many fields, so the professional category system must be extensible.
+
+## Step 2 — Education and Qualifications
+
+Collect:
+
+- Highest education level — required.
+- Field of study or academic specialization — required.
+- Institution name — optional.
+- Graduation status — required.
+- Graduation year — optional.
+- Relevant courses and training — optional.
+- Professional licenses — optional.
+
+Education level options should include:
+
+- No formal education.
+- Secondary school.
+- Vocational or technical education.
+- Diploma.
+- Bachelor's degree.
+- Master's degree.
+- Doctoral degree.
+- Other.
+
+Allow users who are still studying to select “Currently studying.”
+
+The user must not be forced to have a university degree. Many freelance professions depend more on skills and demonstrated ability than on formal education.
+
+For the field of study, provide searchable suggestions but allow custom entries.
+
+## Step 3 — Skills and Competencies
+
+This is one of the most important sections of the onboarding process.
+
+The application must collect the user's actual skills instead of assuming they have a particular specialization.
+
+Implement a searchable, categorized skills selector.
+
+Categories should include, but not be limited to:
+
+### A. Software Development and Engineering
+
+- HTML.
+- CSS.
+- JavaScript.
+- TypeScript.
+- React.
+- Next.js.
+- Vue.
+- Angular.
+- Node.js.
+- Python.
+- Java.
+- C#.
+- PHP.
+- SQL.
+- Database design.
+- API development.
+- Software testing.
+- Git and GitHub.
+- Mobile application development.
+- Web application development.
+- Cloud development.
+
+### B. Artificial Intelligence and Data
+
+- Prompt engineering.
+- Generative AI tools.
+- AI application development.
+- AI automation.
+- Machine learning.
+- Data analysis.
+- Data visualization.
+- Excel.
+- Power BI.
+- SQL analytics.
+- Data cleaning.
+- Data entry.
+- Statistical analysis.
+- Natural language processing.
+- Computer vision.
+- AI workflow integration.
+
+### C. Design and Creative Work
+
+- Graphic design.
+- Logo design.
+- Brand identity.
+- UI design.
+- UX research.
+- UI/UX design.
+- Figma.
+- Adobe Photoshop.
+- Adobe Illustrator.
+- Adobe InDesign.
+- Canva.
+- Video editing.
+- Motion graphics.
+- Animation.
+- Illustration.
+- Presentation design.
+- Social media design.
+- Photo editing.
+- 3D modeling.
+
+### D. Digital Marketing and E-Commerce
+
+- SEO.
+- Search engine marketing.
+- Social media management.
+- Content marketing.
+- Email marketing.
+- Advertising campaigns.
+- Copywriting.
+- Analytics and reporting.
+- E-commerce management.
+- Product listing.
+- Marketing strategy.
+- Community management.
+
+### E. Writing, Languages, and Communication
+
+- Arabic writing.
+- English writing.
+- Content writing.
+- Technical writing.
+- Copywriting.
+- Editing and proofreading.
+- Translation.
+- Localization.
+- Transcription.
+- Research.
+- Documentation.
+- Business communication.
+
+Allow other languages and custom skills.
+
+### F. Business, Administration, and Finance
+
+- Virtual assistance.
+- Project management.
+- Business analysis.
+- Customer support.
+- Administrative assistance.
+- Bookkeeping.
+- Accounting.
+- Financial reporting.
+- Market research.
+- Data organization.
+- Microsoft Office.
+- Google Workspace.
+- Scheduling.
+- CRM management.
+
+### G. Engineering, Education, and Other Professional Fields
+
+Include expandable categories for engineering, architecture, science, education, healthcare-related professional services, consulting, and other legitimate freelance fields.
+
+Do not imply that every profession can be performed remotely or that regulated professional services can be offered without appropriate qualifications.
+
+### Skill Details
+
+For each selected skill, allow the user to specify:
+
+- Skill name.
+- Proficiency level.
+- Years of experience, if applicable.
+- Whether the skill is a primary skill.
+- Whether the skill is supported by a portfolio item or certificate.
+
+Proficiency levels:
+
+- Beginner.
+- Intermediate.
+- Advanced.
+- Expert.
+
+Do not infer expertise from the fact that a user selected a skill.
+
+For first-time onboarding, require the user to select at least three skills. If the user genuinely has fewer than three, provide a clear alternative rather than forcing them to claim skills they do not possess.
+
+Allow users to add, remove, and edit skills at any time later.
+
+## Step 4 — Work Experience
+
+Collect:
+
+- Whether the user has professional experience.
+- Current or most recent job title.
+- Employer or client name, if applicable.
+- Employment or project type.
+- Start and end dates, where relevant.
+- Description of responsibilities.
+- Relevant skills used.
+- Achievements, if the user can substantiate them.
+
+Provide options such as:
+
+- No professional experience yet.
+- Freelance experience.
+- Full-time employment.
+- Part-time employment.
+- Internship.
+- Volunteer experience.
+- Personal projects.
+- Academic projects.
+
+A user without professional experience must be able to complete onboarding without inventing employment history.
+
+If the user has no work experience, allow them to rely on skills, education, training, personal projects, and portfolio work.
+
+Make the experience section repeatable so the user can add multiple entries.
+
+## Step 5 — Certificates and Training
+
+Allow users to add zero or more certificates and courses.
+
+For each certificate, collect:
+
+- Certificate or course name.
+- Issuing organization.
+- Completion date, if applicable.
+- Credential ID, if applicable.
+- Credential URL, if applicable.
+- Relevant skills.
+
+Certificate uploads should be optional and implemented only if file handling is supported safely.
+
+Do not require a certificate to complete the profile.
+
+Do not generate fake certificates, qualifications, or credentials.
+
+## Step 6 — Portfolio and Previous Projects
+
+Ask whether the user has previous work to showcase.
+
+Allow the user to add portfolio entries with:
+
+- Project title.
+- Project description.
+- Role performed.
+- Skills and tools used.
+- Project URL, if available.
+- Images or supported files, if available.
+- Project date, if known.
+- Whether the project was professional, personal, academic, or a demonstration project.
+
+Allow users to skip this section if they do not have portfolio work yet.
+
+Never generate fake portfolio entries automatically.
+
+Clearly distinguish personal projects, sample projects, and paid client projects.
+
+## Step 7 — Freelance Goals and Preferences
+
+Collect:
+
+- Preferred freelance categories.
+- Types of projects the user wants to receive.
+- Preferred industries, if relevant.
+- Preferred project complexity.
+- Preferred budget range, optional.
+- Preferred project duration, optional.
+- Preferred currency.
+- Weekly availability, optional.
+- Preferred working arrangement.
+- Platforms the user uses or wants to explore.
+- Career goals.
+
+Allow the user to choose multiple categories and preferences.
+
+Do not assume the user has an account on Upwork, Fiverr, Freelancer, LinkedIn, Mostaql, or Khamsat.
+
+Selecting a platform should mean only that the user is interested in it, unless a real integration is separately connected.
+
+## Step 8 — Profile Review and Completion
+
+Before completing onboarding, show a review screen summarizing the information entered.
+
+Allow users to go back and edit any section.
+
+Show a profile completion percentage based on clearly defined fields, not an arbitrary number.
+
+The completion screen should confirm that the profile has been saved successfully.
+
+Then route the user to the existing Firework AI dashboard.
+
+Do not show the dashboard before the required onboarding data has been saved.
+
+---
+
+# 4. Required and Optional Fields
+
+The application must distinguish between essential fields and additional information.
+
+## Required to create an account
+
+- Full name.
+- Email.
+- Password.
+- Password confirmation.
+- Acceptance of the terms and privacy policy.
+
+## Required to complete professional onboarding
+
+- Professional headline.
+- Primary professional category.
+- Primary specialization.
+- Professional level.
+- Country.
+- Preferred language.
+- Short professional introduction.
+- Education level.
+- Field of study or equivalent professional background.
+- At least three honestly selected skills, or a clear alternative for users with fewer skills.
+
+## Optional
+
+- Institution name.
+- Graduation year.
+- Certificates.
+- Work experience.
+- Employer names.
+- Portfolio projects.
+- Portfolio URLs.
+- Certificate IDs.
+- Weekly availability.
+- Desired budget.
+- Preferred industries.
+- Preferred freelance platforms.
+- Additional qualifications.
+
+Do not make formal employment, a university degree, professional certificates, or an existing portfolio mandatory.
+
+---
+
+# 5. Authentication and Routing Logic
+
+Implement the following behavior in the existing application.
+
+### Case 1 — Unauthenticated Visitor
+
+If no authenticated user exists, display the welcome page and authentication options.
+
+Do not show private account information or the dashboard.
+
+### Case 2 — Newly Registered User
+
+After account creation and successful authentication, direct the user to professional onboarding.
+
+Do not create fake projects, earnings, statistics, or profile details.
+
+### Case 3 — Authenticated User With Incomplete Onboarding
+
+If the user has an account but has not completed the required profile, route them to the appropriate onboarding step.
+
+Do not force them to repeat completed steps unnecessarily.
+
+### Case 4 — Authenticated User With Completed Onboarding
+
+Allow access to the existing dashboard and its features.
+
+Load the user's saved profile and actual application data.
+
+### Case 5 — Returning User
+
+Persist the authentication session using the existing authentication provider's supported mechanisms.
+
+After authentication is restored, load the correct user profile and route the user according to their onboarding status.
+
+Do not show the login page unnecessarily if the session is valid.
+
+### Case 6 — Sign Out
+
+When the user signs out:
+
+- End the authenticated session through the authentication provider.
+- Clear private user data from the active application state.
+- Return to the welcome or sign-in screen.
+- Prevent access to private pages until the user signs in again.
+
+### Case 7 — Authentication or Database Error
+
+Display a clear error message.
+
+Do not silently create a local fake account, pretend that registration succeeded, or redirect the user to a dashboard without a valid account and saved profile.
+
+---
+
+# 6. Persistent Data Storage
+
+Inspect the existing data architecture before implementing storage.
+
+If the application already uses Firebase Authentication and Firestore, use the existing configuration where appropriate.
+
+A suggested profile structure is:
+
+users/{uid}/profile
+
+The exact schema must match the existing application's conventions and be implemented consistently.
+
+Suggested profile data:
+
+- uid.
+- fullName.
+- email.
+- professionalHeadline.
+- professionalCategory.
+- specialization.
+- professionalLevel.
+- country.
+- preferredLanguage.
+- professionalSummary.
+- education.
+- skills.
+- workExperience.
+- certificates.
+- portfolio.
+- freelancePreferences.
+- onboardingCompleted.
+- profileCompletion.
+- createdAt.
+- updatedAt.
+
+Use server-side timestamps where appropriate and supported.
+
+Keep authentication credentials separate from the professional profile.
+
+Configure database security rules so authenticated users can access and modify only their own private profile data, except where a carefully defined and justified sharing feature exists.
+
+Do not use public read/write database rules as a shortcut.
+
+Do not expose private profile information to other users.
+
+If the current app uses another database, adapt the design to that existing system rather than introducing a second database unnecessarily.
+
+---
+
+# 7. Connect the Profile to the AI Features
+
+The purpose of collecting this information is not merely to display a profile page.
+
+The saved profile must be useful to the existing AI functionality.
+
+When analyzing a freelance project, provide Gemini with the relevant user profile context, including:
+
+- Primary specialization.
+- Selected skills.
+- Proficiency levels.
+- Relevant experience.
+- Education and certificates, when relevant.
+- Relevant portfolio entries.
+- Freelance preferences.
+
+Use only the information necessary for the current task.
+
+The AI must compare project requirements against the actual saved profile.
+
+It should return:
+
+1. Relevant matching skills.
+2. Missing or weakly supported skills.
+3. Relevant experience, if available.
+4. Portfolio entries that relate to the project.
+5. Potential learning gaps.
+6. A reasoned compatibility estimate.
+7. Recommendations for next steps.
+
+Explain the main reasons behind any compatibility score.
+
+If the profile lacks enough information, say so.
+
+Do not claim that the user has experience, certifications, clients, or achievements that are absent from the saved profile.
+
+### Proposal Generation
+
+When generating a freelance proposal, use the user's saved professional profile to personalize the text.
+
+Mention only relevant and verified user-provided details.
+
+If no relevant experience exists, write an honest proposal that focuses on understanding the client's needs, the proposed approach, and the user's actual capabilities.
+
+Do not fabricate a personal history or promise results that cannot be guaranteed.
+
+### Lens AI
+
+When a user asks Lens AI a question about their career, skills, or a selected project, use the appropriate profile and project context.
+
+Do not automatically send every piece of private profile information to every model request. Use relevant context only, and avoid unnecessary disclosure.
+
+---
+
+# 8. Profile Management After Onboarding
+
+Add or improve a profile management page inside the existing application.
+
+The user must be able to:
+
+- View their saved information.
+- Edit their professional headline.
+- Change their professional category.
+- Add and remove skills.
+- Update skill proficiency levels.
+- Add or edit education.
+- Add or edit certificates.
+- Add or edit work experience.
+- Manage portfolio entries.
+- Update freelance preferences.
+- Change their preferred language.
+- Save changes.
+- See validation and saving states.
+
+Changes must persist after refresh and future sign-ins.
+
+If the profile is incomplete, clearly identify which required information is missing.
+
+Do not require users to redo the entire onboarding process when they want to edit a single field.
+
+If the user changes their primary specialization, update the profile without deleting unrelated information.
+
+---
+
+# 9. Account Settings and Privacy
+
+Provide appropriate account settings, including:
+
+- Email address display.
+- Password reset or change flow through the authentication provider.
+- Sign out.
+- Profile editing.
+- Account deletion, if implemented with a safe confirmation process.
+- Privacy and data management information.
+
+Do not collect sensitive information that is unnecessary for freelance project analysis.
+
+Do not request government identification numbers, bank credentials, payment card details, or account passwords for external freelance platforms.
+
+Only request information needed for the stated purpose.
+
+Ensure that any uploaded CVs, certificates, and portfolio files are handled securely.
+
+Do not expose uploaded private documents through publicly accessible URLs unless the user explicitly chooses to publish a portfolio item.
+
+---
+
+# 10. Design Requirements
+
+The new experience must match the existing Firework AI visual identity while improving clarity and usability.
+
+Design direction:
+
+- Premium and minimal.
+- Professional.
+- Inspired by the clarity and restraint of Apple product interfaces.
+- Smooth but restrained animations.
+- Excellent mobile, tablet, laptop, and desktop layouts.
+- Clear typography.
+- Consistent spacing.
+- Accessible form labels and controls.
+- Obvious primary and secondary actions.
+- Clear validation and error messages.
+- A visible onboarding progress indicator.
+- No excessive gradients, glass effects, decorative cards, or distracting animation.
+
+The onboarding form should feel like a guided process, not a long, intimidating questionnaire.
+
+Use logical steps, searchable skill selection, repeatable entries for experience and certificates, and clear progress.
+
+Do not make the user complete optional sections just to reach the dashboard.
+
+The default interface language should follow the existing language configuration. Preserve Arabic, English, and Chinese support if already implemented, and ensure that right-to-left layout works correctly for Arabic.
+
+Do not introduce mixed-language labels unnecessarily.
+
+---
+
+# 11. Implementation and Testing Requirements
+
+Before changing code:
+
+1. Inspect the existing authentication system.
+2. Inspect the existing routing and protected pages.
+3. Inspect the existing database schema.
+4. Inspect the current user profile components.
+5. Inspect the current dashboard and AI features.
+6. Identify existing components that can be reused.
+7. Determine whether Firebase Authentication and Firestore are already configured and functional.
+
+Then implement the feature in the existing project.
+
+Do not overwrite unrelated files or remove existing functionality.
+
+After implementation, test these scenarios:
+
+1. A new visitor opens the application.
+2. The visitor creates an account with valid information.
+3. Invalid email and password fields are rejected.
+4. Password mismatch is detected.
+5. Existing email registration is handled correctly.
+6. The new user reaches onboarding.
+7. Required fields are validated.
+8. Optional sections can be skipped.
+9. A user with no professional experience can complete onboarding.
+10. A user with no certificates can complete onboarding.
+11. The profile saves successfully.
+12. Refreshing the page does not lose the saved profile.
+13. Signing out returns the user to the welcome page.
+14. Signing in again restores the correct profile.
+15. Incomplete onboarding resumes at the appropriate stage.
+16. A user cannot access another user's private profile.
+17. Project analysis uses the actual saved skills.
+18. Proposal generation does not fabricate experience.
+19. A returning user with completed onboarding can access the dashboard.
+20. Authentication or database failures produce clear error messages.
+
+Test mobile and desktop layouts as well.
+
+Do not claim that a test passed unless you actually ran it or verified its result.
+
+---
+
+# 12. Acceptance Criteria
+
+The feature is complete only when:
+
+- Unauthenticated users no longer enter the private dashboard automatically.
+- Registration and sign-in are functional.
+- Session handling works.
+- First-time users complete required professional onboarding.
+- User profile information is saved persistently.
+- Returning users can access their existing profiles.
+- Users can edit their profiles later.
+- Optional experience, certificates, and portfolio sections can remain empty.
+- No fake profile data is inserted.
+- The existing AI features can use relevant saved profile information.
+- The application remains responsive and consistent with its design.
+- Existing working functionality has been preserved.
+- Actual errors and remaining configuration requirements are documented.
+
+## Final Instruction
+
+Start by inspecting the existing Firework AI project and report what authentication, routing, database, and profile functionality already exists.
+
+Then implement this feature in the current application, preserving existing functionality.
+
+Do not create a separate application, do not rebuild the project from scratch, and do not replace real authentication with a visual mockup.
+
+The goal is to make Firework AI recognize each user through a real account and a saved professional profile, so that future AI project analysis and proposal generation are genuinely personalized.

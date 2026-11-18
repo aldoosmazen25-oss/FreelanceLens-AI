@@ -1,0 +1,146 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Freelancer professional profile stored under /users/{userId}",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "title": { "type": "string", "maxLength": 160 },
+        "bio": { "type": "string", "maxLength": 2000 },
+        "hourlyRate": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "availability": { "type": "string", "maxLength": 60 },
+        "UpdatedAt": { "type": "string", "maxLength": 60 }
+      },
+      "required": ["uid", "name"]
+    },
+    "SavedProject": {
+      "title": "SavedProject",
+      "description": "Analyzed or tracked freelance project under /users/{userId}/projects/{projectId}",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "description": { "type": "string", "maxLength": 8000 },
+        "platform": { "type": "string", "maxLength": 60 },
+        "budget": { "type": "string", "maxLength": 120 },
+        "deadline": { "type": "string", "maxLength": 120 },
+        "matchScore": { "type": "number" },
+        "status": {
+          "type": "string",
+          "enum": ["new", "analyzed", "proposed", "waiting", "in_progress", "completed"]
+        },
+        "createdAt": { "type": "string", "maxLength": 60 }
+      },
+      "required": ["id", "ownerId", "title", "status"]
+    },
+    "ProposalRecord": {
+      "title": "ProposalRecord",
+      "description": "Competitive proposal generated for a project under /users/{userId}/proposals/{proposalId}",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "projectId": { "type": "string", "maxLength": 128 },
+        "projectTitle": { "type": "string", "maxLength": 240 },
+        "tone": { "type": "string", "maxLength": 60 },
+        "proposedBudget": { "type": "string", "maxLength": 80 },
+        "duration": { "type": "string", "maxLength": 80 },
+        "fullText": { "type": "string", "maxLength": 10000 },
+        "status": { "type": "string", "enum": ["draft", "sent", "replied", "won", "lost"] },
+        "createdAt": { "type": "string", "maxLength": 60 }
+      },
+      "required": ["id", "ownerId", "projectTitle", "fullText", "status"]
+    },
+    "FinancialTransaction": {
+      "title": "FinancialTransaction",
+      "description": "Financial cashflow record under /users/{userId}/financials/{transactionId}",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "type": { "type": "string", "enum": ["revenue", "expense"] },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "maxLength": 40 },
+        "status": { "type": "string", "enum": ["received", "pending"] },
+        "projectId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "ownerId", "title", "type", "amount", "status"]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "AI consultation chat thread under /users/{userId}/chatSessions/{sessionId}",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "maxLength": 200 },
+        "updatedAt": { "type": "string", "maxLength": 60 }
+      },
+      "required": ["id", "ownerId", "title"]
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "Smart notification alert under /users/{userId}/notifications/{notificationId}",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "maxLength": 200 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "type": { "type": "string", "enum": ["success", "warning", "opportunity", "info"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "maxLength": 60 }
+      },
+      "required": ["id", "ownerId", "title", "type", "read"]
+    },
+    "VoiceSession": {
+      "title": "VoiceSession",
+      "description": "Voice consultation history session with Lens AI under /users/{userId}/voiceSessions/{sessionId}",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "maxLength": 200 },
+        "language": { "type": "string", "maxLength": 20 },
+        "voiceName": { "type": "string", "maxLength": 40 },
+        "updatedAt": { "type": "string", "maxLength": 60 }
+      },
+      "required": ["id", "ownerId", "title"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores the authenticated freelancer's profile."
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": "SavedProject",
+      "description": "Stores the user's analyzed and saved freelance projects."
+    },
+    "/users/{userId}/proposals/{proposalId}": {
+      "schema": "ProposalRecord",
+      "description": "Stores generated proposals for the user."
+    },
+    "/users/{userId}/financials/{transactionId}": {
+      "schema": "FinancialTransaction",
+      "description": "Stores revenue and expense records for the user."
+    },
+    "/users/{userId}/chatSessions/{sessionId}": {
+      "schema": "ChatSession",
+      "description": "Stores AI consultation chat sessions for the user."
+    },
+    "/users/{userId}/voiceSessions/{sessionId}": {
+      "schema": "VoiceSession",
+      "description": "Stores voice conversation history with Lens AI for the user."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": "NotificationItem",
+      "description": "Stores smart notifications for the user."
+    }
+  }
+}

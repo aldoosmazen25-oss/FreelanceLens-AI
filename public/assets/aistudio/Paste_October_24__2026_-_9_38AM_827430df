@@ -1,0 +1,913 @@
+
+PROJECT NAME: FreelanceLens AI
+PRODUCT: AI-Powered Freelance Project Intelligence Platform
+
+ROLE AND MISSION
+
+Act as a senior full-stack engineer, AI engineer, product designer, UX architect, and QA engineer.
+
+Build FreelanceLens AI as a professional, fully functional AI platform that helps freelancers understand job opportunities, evaluate project requirements, compare projects against their real skills and portfolio, prepare tailored proposals, analyze CVs and files, and manage their freelance workflow.
+
+IMPORTANT:
+This is not a retail analytics application. The reference video is provided ONLY for its visual style and dashboard layout. Adapt that design language to freelance project intelligence.
+
+If an existing project or codebase is provided, inspect it first. Preserve the current working application, its useful components, routing, data, and functionality. Do not delete, replace, or rebuild working features unnecessarily.
+
+Do not deliver a static prototype pretending to be a working AI application. Implement real application logic and connect the configured AI model through secure server-side functions.
+
+==================================================
+1. VISUAL DESIGN — FOLLOW THE REFERENCE VIDEO
+==================================================
+
+Use the uploaded dashboard video as the primary visual reference.
+
+Recreate its overall design language:
+
+- Minimalist, modern, premium SaaS dashboard.
+- Warm off-white or very light gray background.
+- Charcoal and near-black typography.
+- White or softly tinted cards.
+- Rounded rectangular panels and pill-shaped navigation.
+- Compact vertical icon sidebar on the left in desktop layouts.
+- Horizontal navigation across the top.
+- Generous whitespace and carefully aligned content.
+- Subtle borders, restrained shadows, and soft hover states.
+- Clean charts, progress indicators, compact badges, and well-organized data.
+- A professional Kanban board with separate workflow columns.
+- Elegant transitions, without excessive animations.
+- Responsive design for desktop, laptop, tablet, and mobile.
+
+Suggested palette:
+- Background: #F6F6F3
+- Surface: #FFFFFF
+- Primary text: #20211F
+- Secondary text: #777A75
+- Border: #E7E8E3
+- Accent: restrained indigo or violet.
+- Success, warning, and error colors must remain accessible.
+
+Use a clean, professional font with good Arabic support, such as IBM Plex Sans Arabic or Cairo.
+
+The interface must feel like a real premium productivity tool, not a generic AI-generated landing page.
+
+Do not copy the reference brand, store name, product cards, or retail-specific content.
+
+==================================================
+2. LANGUAGE AND DIRECTION
+==================================================
+
+Support three interface languages:
+1. Arabic
+2. English
+3. Chinese (Simplified)
+
+Arabic must be the default language on a new installation.
+
+Requirements:
+- Full Arabic interface, not a mixture of Arabic and English labels.
+- Correct RTL layout for Arabic.
+- Correct LTR layout for English and Chinese.
+- A visible language selector in settings or the user menu.
+- Translate navigation, buttons, forms, empty states, validation messages, notifications, charts, and AI-related UI.
+- Preserve technical terms when necessary, but explain them in Arabic.
+- Keep language files separate from UI components.
+- Changing language must update the interface immediately.
+- Store the user's selected language in their account or local settings when available.
+
+Do not claim support for additional languages unless their translations are implemented.
+
+==================================================
+3. APPLICATION STRUCTURE
+==================================================
+
+Create a persistent application shell containing:
+
+A. Top navigation
+- Application logo and name.
+- Current page title or breadcrumb.
+- Search or command launcher.
+- Notifications.
+- Language selector.
+- Theme selector.
+- User profile menu.
+
+B. Left navigation rail or sidebar
+- Dashboard.
+- Project Analyzer.
+- My Projects.
+- Lens AI Assistant.
+- Proposal Generator.
+- CV & Portfolio.
+- Find Opportunities.
+- Workflow Board.
+- Pricing Calculator.
+- Earnings & Analytics.
+- Profile & Settings.
+
+The sidebar should be compact and elegant, inspired by the reference video. On mobile, convert it into an accessible drawer or bottom navigation.
+
+C. Main content
+- Page-specific title and description.
+- Primary action button.
+- Contextual filters.
+- Content cards and data visualizations.
+- Empty, loading, success, and error states.
+
+Use a consistent design system with reusable components, spacing, typography, buttons, inputs, cards, dialogs, dropdowns, and notification elements.
+
+==================================================
+4. DASHBOARD
+==================================================
+
+Create a personalized freelance intelligence dashboard.
+
+Include the following metrics:
+- Total projects.
+- Projects analyzed.
+- Proposals sent.
+- Pending responses.
+- Active projects.
+- Completed projects.
+- Actual recorded earnings.
+- Proposal response rate, when enough real data exists.
+
+Every metric must be calculated from actual stored application data.
+
+Rules:
+- New users must see zero values or clear empty states.
+- Never show invented projects, earnings, clients, or successful proposals.
+- Never display a fake live-user count.
+- Do not create example records in a real user's account without explicit consent.
+- Optional demo data must be clearly labeled and separated from real account data.
+- Do not mix demo data with real analytics.
+
+Dashboard sections:
+1. Welcome message and quick actions.
+2. Overview metric cards.
+3. Recent projects.
+4. Project status Kanban preview.
+5. Skills and project-match insights.
+6. Earnings chart based on recorded transactions.
+7. Proposal activity.
+8. Recent notifications.
+9. Quick access to the AI assistant.
+
+All charts must reflect real records and display useful empty states when no data exists.
+
+==================================================
+5. ADVANCED AI PROJECT ANALYZER
+==================================================
+
+This is the core feature of FreelanceLens AI.
+
+Provide a large text area where the user can paste a freelance job description.
+
+Also support:
+- Project title.
+- Source platform: Upwork, Fiverr, Freelancer, Mostaql, Khamsat, LinkedIn, or Other.
+- Project URL as optional reference text.
+- Budget and currency, if supplied.
+- Deadline or duration, if supplied.
+- File attachments and project images.
+- Save analysis to the user's project list.
+
+The analyzer must extract and explain:
+
+1. Project summary.
+2. Client's main objective.
+3. Required deliverables.
+4. Required technical and professional skills.
+5. Required tools and technologies.
+6. Expected scope of work.
+7. Estimated complexity.
+8. Dependencies and assumptions.
+9. Missing information.
+10. Potential risks and unclear requirements.
+11. Questions to ask the client.
+12. Estimated effort and possible duration.
+13. Budget adequacy, when sufficient information exists.
+14. Recommended execution plan.
+15. Suggested milestones.
+16. Relevant skills from the user's profile.
+17. Skill gaps and areas requiring further learning.
+18. A personalized compatibility score.
+
+ANALYSIS QUALITY RULES
+
+- Clearly separate information explicitly stated by the client from AI-generated estimates.
+- Explain the reasoning behind recommendations.
+- Never invent a budget, deadline, requirement, or client statement.
+- If data is missing, display "Not specified" and explain what is needed.
+- Mark estimates as estimates, not facts.
+- Ask clarifying questions when the description is insufficient.
+- Allow the user to edit and rerun the analysis.
+- Allow saving, exporting, and revisiting analysis results.
+
+The compatibility score must be based on a transparent scoring method using:
+- Required skills.
+- Skill proficiency.
+- Relevant experience.
+- Portfolio evidence.
+- Availability and deadline constraints, if provided.
+- Other explicitly configured criteria.
+
+Show both the score and its explanation.
+
+If no user profile or portfolio evidence exists, label the score as provisional or insufficiently supported. Do not invent qualifications to produce a confident score.
+
+==================================================
+6. LENS AI — REAL AI ASSISTANT
+==================================================
+
+Build an AI chat assistant dedicated to freelance work.
+
+It must support:
+- General questions about freelancing.
+- Questions about project requirements.
+- Questions about a selected project's analysis.
+- Help estimating project effort.
+- Help identifying skill gaps.
+- Advice on communicating with clients.
+- Proposal improvement.
+- Pricing and negotiation guidance.
+- Project planning.
+- Technical explanations.
+- Follow-up questions and multi-turn conversations.
+
+The assistant should understand the current project context when the user chooses to discuss a specific project.
+
+Include:
+- A professional chat interface.
+- Conversation history.
+- New conversation action.
+- Clear conversation action with confirmation.
+- Suggested prompts.
+- Streaming responses if supported by the chosen model and implementation.
+- Loading indicators.
+- Retry functionality.
+- Error messages that explain what failed.
+- Copy response action.
+- Optional response regeneration.
+
+CRITICAL:
+Typing "Hello" must not produce an application error.
+
+The assistant must make a real request to the configured AI model. It must not return hardcoded fake AI answers as if they were generated by the model.
+
+If the model is unavailable, show a clear connection error and an actionable retry option.
+
+Never silently substitute placeholder responses for real AI output.
+
+==================================================
+7. PROPOSAL GENERATOR
+==================================================
+
+Generate tailored proposals based on:
+- The analyzed project.
+- The user's actual skills.
+- Verified user experience.
+- Portfolio items supplied by the user.
+- User-defined pricing and availability.
+- The client's stated requirements.
+
+Proposal styles:
+- Professional.
+- Formal.
+- Friendly.
+- Concise and direct.
+- Persuasive but honest.
+
+Length options:
+- Short.
+- Medium.
+- Detailed.
+
+Each proposal should include, when appropriate:
+1. Personalized opening.
+2. Understanding of the client's problem.
+3. Relevant verified capabilities.
+4. Proposed approach.
+5. Deliverables.
+6. Suggested timeline, if supported.
+7. Clarifying questions, if needed.
+8. Honest closing.
+
+Important honesty rules:
+- Never fabricate previous clients.
+- Never invent years of experience.
+- Never claim certifications the user does not have.
+- Never invent portfolio projects, case studies, or results.
+- Never promise outcomes that cannot be guaranteed.
+- If relevant experience is unavailable, emphasize an honest approach, transferable skills, and a realistic plan.
+
+Allow the user to:
+- Edit the generated proposal.
+- Regenerate it with another tone.
+- Adjust the length.
+- Copy the text.
+- Export it.
+- Save a version.
+- Track whether it was sent and whether a response arrived.
+
+Do not claim a proposal was sent externally unless a real sending integration exists and the user authorized the action.
+
+==================================================
+8. CV AND PORTFOLIO ANALYSIS
+==================================================
+
+Provide a dedicated CV and portfolio analysis workspace.
+
+Supported CV formats should include PDF, DOCX, and TXT when the backend libraries support them.
+
+Portfolio inputs:
+- Project descriptions.
+- Images.
+- PDF documents.
+- URLs as references.
+- User-provided technologies and responsibilities.
+
+CV analysis:
+- Extract actual education and experience.
+- Identify skills.
+- Assess structure and readability.
+- Identify missing sections.
+- Suggest ATS-friendly improvements.
+- Improve wording without inventing facts.
+- Suggest relevant keywords based on a supplied target role.
+- Compare the CV against a selected project.
+
+Portfolio analysis:
+- Summarize each submitted work sample.
+- Identify demonstrated skills only when supported by the content.
+- Suggest clearer project descriptions.
+- Identify evidence gaps.
+- Recommend relevant samples for a particular job.
+
+The user must be able to review extracted information before saving it to their profile.
+
+Do not infer qualifications from an image or CV when evidence is insufficient.
+
+==================================================
+9. REAL FILE AND IMAGE UPLOADS
+==================================================
+
+Implement actual upload and processing workflows.
+
+Requirements:
+- File picker.
+- Drag-and-drop where appropriate.
+- Upload progress.
+- File type and size validation.
+- Clear supported-format information.
+- File preview where possible.
+- Remove attachment action.
+- Upload failure handling.
+- Retry action.
+- Secure storage or temporary processing.
+- Proper file access permissions.
+
+For images:
+- Use a configured vision-capable AI model to analyze relevant project screenshots, design references, diagrams, and supplied visual briefs.
+- Extract visible requirements when possible.
+- Explain uncertainty when text is unreadable.
+- Allow the user to ask follow-up questions about the image.
+
+For documents:
+- Extract text from supported formats.
+- Process the extracted text with the AI model.
+- Preserve the original file reference when saved.
+- Handle empty, corrupted, encrypted, or unsupported files gracefully.
+
+Do not display a successful upload message until the upload has actually succeeded.
+
+Do not pretend a file was analyzed when only its filename was received.
+
+==================================================
+10. FIND FREELANCE OPPORTUNITIES
+==================================================
+
+Create a separate opportunity discovery and matching page.
+
+Include:
+- Search input.
+- Platform selector.
+- Skills filter.
+- Budget filter.
+- Project type.
+- Experience level.
+- Deadline information.
+- Sort options.
+- Saved opportunities.
+- Compatibility score.
+
+Supported platform categories:
+- Upwork.
+- Fiverr.
+- Freelancer.
+- Mostaql.
+- Khamsat.
+- LinkedIn.
+- General freelance opportunities.
+
+Integration requirements:
+- Do not claim to retrieve live listings unless a real data source is connected.
+- If platform APIs or authorized integrations are unavailable, provide manual URL entry and user-pasted job descriptions.
+- Clearly distinguish live listings, imported listings, manually entered projects, and demo examples.
+- Do not scrape platforms in violation of their terms.
+- Do not invent client names, active jobs, budgets, or URLs.
+- Allow the user to analyze a job they found elsewhere.
+
+Opportunity matching should use the actual user profile and the job requirements.
+
+==================================================
+11. PROJECT MANAGEMENT AND KANBAN
+==================================================
+
+Implement a functional Kanban board with these columns:
+
+- New.
+- Analyzed.
+- Proposal Sent.
+- Awaiting Response.
+- In Progress.
+- Completed.
+- Archived.
+
+Every project card should show relevant available information:
+- Project title.
+- Source.
+- Budget, if known.
+- Deadline, if known.
+- Match score, if calculated.
+- Current status.
+- Last updated date.
+
+Actions:
+- Open project.
+- Edit project.
+- Change status.
+- Move cards between columns.
+- Search and filter.
+- Duplicate a project with confirmation.
+- Archive a project.
+- Delete with confirmation.
+- View analysis and proposal history.
+
+Persist changes to the database.
+
+Use drag-and-drop only if implemented reliably; also provide accessible status-change controls.
+
+==================================================
+12. PRICING CALCULATOR
+==================================================
+
+Build a practical freelance pricing calculator.
+
+Inputs:
+- Estimated hours.
+- Desired hourly rate.
+- Project complexity.
+- Revisions allowance.
+- Expenses.
+- Urgency.
+- Currency.
+- Optional contingency percentage.
+
+Outputs:
+- Estimated labor cost.
+- Additional costs.
+- Suggested price range.
+- Estimated working hours.
+- Estimated effective hourly rate.
+- Assumptions used.
+
+Use transparent formulas and allow manual adjustments.
+
+Never present a generated estimate as a guaranteed market price.
+
+If there is insufficient information, explain the uncertainty.
+
+==================================================
+13. EARNINGS AND ANALYTICS
+==================================================
+
+Build an earnings workspace that records actual user-entered financial data.
+
+Features:
+- Record income.
+- Record expenses.
+- Edit transactions.
+- Delete transactions with confirmation.
+- Filter by date.
+- Filter by project.
+- Select currency.
+- View totals and trends.
+- Calculate proposal response rate from recorded proposal history.
+- Track project completion statistics.
+
+Do not automatically invent revenue, clients, or conversions.
+
+Clearly distinguish:
+- Recorded income.
+- Expected income.
+- Unpaid invoices.
+- Expenses.
+- Estimates.
+
+Never combine different currencies into one total without an explicit conversion rate and clear conversion logic.
+
+Show empty states for new accounts.
+
+==================================================
+14. PROFILE AND SKILLS
+==================================================
+
+Create a profile management page with:
+- Display name.
+- Professional headline.
+- Biography.
+- Skills.
+- Skill proficiency.
+- Experience.
+- Education.
+- Certifications.
+- Languages.
+- Availability.
+- Preferred project types.
+- Portfolio references.
+- CV files.
+- Hourly rate and preferred currency.
+
+Users must control what information is saved.
+
+The AI must use only user-provided or verified information when generating proposals or matching jobs.
+
+Never automatically create fake credentials or experience.
+
+Allow the user to correct AI-extracted profile data before saving it.
+
+==================================================
+15. AUTHENTICATION AND FIREBASE
+==================================================
+
+Use Firebase Authentication and Firestore if the Google AI Studio environment supports them and the project is configured correctly.
+
+Authentication features:
+- Email and password sign-up.
+- Sign-in.
+- Sign-out.
+- Password reset.
+- Protected application routes.
+- Clear authentication errors.
+- Loading states.
+- Session persistence.
+
+Google sign-in:
+- Implement the correct OAuth flow.
+- Explain required OAuth configuration.
+- Document authorized JavaScript origins and redirect URIs.
+- Explain test-user configuration and OAuth publishing requirements.
+- Never claim Google sign-in is ready before it has been tested with valid configuration.
+
+If Google reports that the app is unverified or in testing mode, provide clear setup guidance rather than hiding the error.
+
+Firestore:
+- Separate user data by authenticated user ID.
+- Apply restrictive security rules.
+- Ensure users cannot read or modify other users' private projects, CVs, files, or conversations.
+- Validate data on the server when appropriate.
+- Never expose administrative credentials in frontend code.
+
+If Firebase configuration is missing, show a clear setup state and explain exactly which variables or console settings are required.
+
+==================================================
+16. AI MODEL AND API INTEGRATION
+==================================================
+
+Use the Google AI model available in the configured Google AI Studio environment.
+
+Choose an appropriate supported model for:
+- General chat.
+- Project analysis.
+- Proposal generation.
+- CV analysis.
+- Image understanding.
+
+Use the actual supported model identifiers and current SDK APIs available in the environment. Do not assume a model name or SDK method exists without verifying it.
+
+ARCHITECTURE:
+- Frontend: React and TypeScript, using the existing framework where practical.
+- Backend: secure server-side API routes or functions supported by the environment.
+- AI service: centralized reusable service.
+- Data access: centralized repository or service layer.
+- Authentication and persistence: Firebase when configured.
+- File processing: server-side where required.
+- Validation: schemas and clear error handling.
+- Environment configuration: documented variables.
+
+SECURITY:
+- Store API keys in server-side secrets or environment variables.
+- Never embed private API keys in browser JavaScript.
+- Never commit secrets to source control.
+- Never print secrets in logs or error messages.
+- Never ask the user to paste private keys into public source files.
+- Use appropriate authentication, request validation, file limits, and rate limiting where supported.
+
+Create a centralized AI service with separate methods for:
+- analyzeProject()
+- chatWithLensAI()
+- generateProposal()
+- analyzeCV()
+- analyzePortfolio()
+- analyzeImage()
+- matchOpportunity()
+
+All methods must have clear input and output types.
+
+Do not scatter model calls throughout UI components.
+
+Handle:
+- Missing API key.
+- Invalid API key.
+- Permission errors.
+- Unsupported model.
+- Rate limits.
+- Network failures.
+- Malformed model responses.
+- Empty responses.
+- Request timeouts.
+
+Display useful messages and allow retrying failed operations.
+
+If the selected model does not support image input, use a compatible supported model or clearly disable that specific capability until configured.
+
+==================================================
+17. DATABASE AND DATA MODEL
+==================================================
+
+Design a maintainable schema for:
+
+- Users.
+- Profiles.
+- Skills.
+- Projects.
+- Project analyses.
+- Proposals.
+- CV documents.
+- Portfolio items.
+- Uploaded files.
+- Conversations.
+- Messages.
+- Saved opportunities.
+- Workflow status history.
+- Transactions.
+- Notifications.
+- User preferences.
+
+Each record must have appropriate ownership, timestamps, and validation.
+
+Important behavior:
+- New users start with empty project collections.
+- Dashboard metrics derive from stored records.
+- Saved analyses persist across sessions.
+- Proposal versions can be retrieved.
+- Deleting a project must follow a clear policy for related records.
+- Uploaded files must not become publicly accessible by default.
+- Provide safe handling of partial failures.
+
+Do not use browser local storage as a replacement for secure authentication or a shared database.
+
+Local storage may be used for non-sensitive preferences or temporary drafts where appropriate.
+
+==================================================
+18. SEARCH, COMMAND CENTER, AND NOTIFICATIONS
+==================================================
+
+Global search:
+- Search projects.
+- Search proposals.
+- Search conversations where supported.
+- Search saved opportunities.
+
+Command center:
+- Keyboard shortcut Ctrl+K on desktop.
+- Accessible alternative for mobile.
+- Quick navigation.
+- New project action.
+- Start AI chat.
+- Generate proposal.
+- Open profile settings.
+
+Notifications:
+- Analysis completed.
+- Proposal updated.
+- Project status changed.
+- Deadline approaching, when a real deadline exists.
+- Upload failed.
+- Integration requires configuration.
+
+Only generate notifications from real events or explicitly scheduled, implemented logic.
+
+Do not create fake activity notifications.
+
+==================================================
+19. INTERACTIONS AND ACCESSIBILITY
+==================================================
+
+Every visible control must have a meaningful working action.
+
+Requirements:
+- No dead buttons.
+- No links pointing to empty destinations.
+- No decorative upload controls pretending to upload files.
+- No fake sign-in flows.
+- No AI responses hardcoded as successful results.
+- No nonfunctional microphone or voice buttons.
+
+If voice functionality is implemented:
+- Request microphone permission appropriately.
+- Use a supported voice API or speech-recognition implementation.
+- Show recording status.
+- Allow the user to stop recording.
+- Handle denied permissions and unsupported browsers.
+- Explain any required configuration.
+- Do not display an active recording state unless recording actually started.
+
+If voice functionality cannot be implemented reliably, hide the feature or label it as unavailable. Do not leave a broken button.
+
+Accessibility:
+- Keyboard navigation.
+- Visible focus indicators.
+- Accessible form labels.
+- Appropriate contrast.
+- Semantic page structure.
+- Accessible dialogs.
+- Reduced-motion support.
+- Proper handling of RTL layouts.
+
+==================================================
+20. EMPTY, LOADING, SUCCESS, AND ERROR STATES
+==================================================
+
+Every major feature must handle all relevant states.
+
+Examples:
+
+Empty project list:
+"No projects yet. Add your first freelance project to begin."
+
+No CV:
+"Upload your CV to analyze your experience and identify improvements."
+
+AI configuration missing:
+"AI is not configured yet. Complete the server-side model configuration to enable analysis."
+
+File processing:
+- Show actual progress when available.
+- Show processing status.
+- Report completion only after successful processing.
+
+Network failure:
+- Explain that the request failed.
+- Preserve user input.
+- Offer retry.
+
+Validation failure:
+- Explain which input needs correction.
+
+Never silently fail. Never replace an error with fake successful data.
+
+==================================================
+21. PERFORMANCE AND CODE QUALITY
+==================================================
+
+Use:
+- Strict TypeScript where practical.
+- Reusable components.
+- Clear folder organization.
+- Typed service interfaces.
+- Consistent error handling.
+- Form validation.
+- Appropriate loading boundaries.
+- Efficient database queries.
+- Responsive chart rendering.
+- Lazy loading where useful.
+- Secure file handling.
+
+Avoid:
+- One enormous component containing the entire app.
+- Duplicate business logic.
+- Fake APIs.
+- Randomly generated dashboard metrics.
+- Unnecessary dependencies.
+- Hardcoded user records.
+- Exposed secrets.
+- Excessive animation.
+- Unhandled promise rejections.
+- TypeScript errors and unused code.
+
+Use the existing framework and package structure when extending an existing project.
+
+==================================================
+22. TESTING AND ACCEPTANCE CRITERIA
+==================================================
+
+Before declaring the application complete, verify the following:
+
+TEST 1:
+A new account opens a clean dashboard with no fabricated projects or income.
+
+TEST 2:
+A user can create a project, enter a real job description, and request AI analysis.
+
+TEST 3:
+The analysis is generated by the configured AI model and clearly identifies missing information.
+
+TEST 4:
+The user can ask Lens AI a simple question such as "Hello" and receive a real response when the model is configured.
+
+TEST 5:
+A model configuration error produces an understandable message rather than a broken screen.
+
+TEST 6:
+A supported file can be selected, uploaded, processed, and analyzed.
+
+TEST 7:
+An image can be sent to a compatible vision model and analyzed successfully when configured.
+
+TEST 8:
+A CV can be uploaded, parsed, reviewed, and analyzed.
+
+TEST 9:
+A proposal is generated using actual profile information without fabricated credentials.
+
+TEST 10:
+The user can save, edit, reopen, and delete projects.
+
+TEST 11:
+Moving a project between Kanban columns persists the new status.
+
+TEST 12:
+Dashboard statistics update when actual project records change.
+
+TEST 13:
+Pricing calculations produce consistent results from user inputs.
+
+TEST 14:
+Changing the language updates the UI and correctly switches RTL/LTR direction.
+
+TEST 15:
+Authentication and database access respect user permissions.
+
+TEST 16:
+All important navigation links and buttons work.
+
+TEST 17:
+The application remains usable on desktop, tablet, and mobile.
+
+TEST 18:
+The browser console and build output are checked for significant errors.
+
+TEST 19:
+The app starts successfully using the documented commands.
+
+TEST 20:
+Missing integrations are clearly documented instead of being represented as operational.
+
+Do not mark any test as passed unless it was actually checked.
+
+==================================================
+23. FINAL DELIVERY
+==================================================
+
+Deliver a working application, not merely a design description.
+
+Provide:
+1. Complete source code.
+2. Organized components and pages.
+3. Database and authentication configuration.
+4. AI service integration.
+5. Secure environment variable setup.
+6. Supported file-upload workflow.
+7. Responsive interface.
+8. Clear installation instructions.
+9. A sample environment-variable template without real secrets.
+10. Firebase setup instructions.
+11. A list of features that work immediately.
+12. A list of features that require credentials or external configuration.
+13. A verification checklist.
+14. Any known limitations.
+
+Start by inspecting the current project structure and the capabilities already enabled in Google AI Studio.
+
+Then implement the application in logical stages, run available checks, and fix errors before moving on.
+
+If an essential external credential or integration is missing, implement the correct integration boundary and provide exact setup instructions. Do not simulate success.
+
+FINAL PRODUCT GOAL:
+
+FreelanceLens AI must combine the premium, minimalist dashboard aesthetic of the reference video with the intelligence of a real AI freelance assistant.
+
+It should help freelancers understand projects, evaluate opportunities, improve proposals, analyze their own qualifications, and manage work in one reliable application.
+
+Prioritize functional correctness, trustworthy AI outputs, secure configuration, a polished interface, and maintainable code over flashy but nonfunctional features.
